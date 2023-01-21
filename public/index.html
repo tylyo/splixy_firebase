@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome to Firebase Hosting</title>
+
+  <!-- update the version number as needed -->
+  <script defer src="/__/firebase/9.15.0/firebase-app-compat.js"></script>
+  <!-- include only the Firebase features as you need -->
+  <!-- <script defer src="/__/firebase/9.15.0/firebase-auth-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-database-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-messaging-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-storage-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-analytics-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-remote-config-compat.js"></script>
+    <script defer src="/__/firebase/9.15.0/firebase-performance-compat.js"></script> -->
+  <!-- 
+      initialize the SDK after all desired features are loaded, set useEmulator to false
+      to avoid connecting the SDK to running emulators.
+    -->
+  <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+
+  <style media="screen">
+    body {
+      background: #ECEFF1;
+      color: rgba(0, 0, 0, 0.87);
+      font-family: Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    #message {
+      background: white;
+      max-width: 360px;
+      margin: 100px auto 16px;
+      padding: 32px 24px;
+      border-radius: 3px;
+    }
+
+    #message h2 {
+      color: #ffa100;
+      font-weight: bold;
+      font-size: 16px;
+      margin: 0 0 8px;
+    }
+
+    #message h1 {
+      font-size: 22px;
+      font-weight: 300;
+      color: rgba(0, 0, 0, 0.6);
+      margin: 0 0 16px;
+    }
+
+    #message p {
+      line-height: 140%;
+      margin: 16px 0 24px;
+      font-size: 14px;
+    }
+
+    #message a {
+      display: block;
+      text-align: center;
+      background: #039be5;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: white;
+      padding: 16px;
+      border-radius: 4px;
+    }
+
+    #message,
+    #message a {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    }
+
+    #load {
+      color: rgba(0, 0, 0, 0.4);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    @media (max-width: 600px) {
+
+      body,
+      #message {
+        margin-top: 0;
+        background: white;
+        box-shadow: none;
+      }
+
+      body {
+        border-top: 16px solid #ffa100;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="message">
+    <h2>Welcome</h2>
+    <h1>Firebase Hosting Setup Complete</h1>
+    <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
+    <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+  </div>
+  <p id="load">Firebase SDK Loading&hellip;</p>
+
+  <script>
+
+
+    const input = {
+      "a": 10,
+      "cat": 'general',
+      "cred": "AT69UVIGHW",
+      "date": 1673624585,
+      "debs": { "AT69UVIGHW": 3, "WY1l2Vl1qI": 2 },
+      "name": 'trx',
+      "q": { a: 2, t: 'item' },
+      "qt": 1,
+      "t": 'item',
+      "dc": 1673624596
+    }
+    class WalletMember {
+      /**sss */
+      p = 0.0;
+      s = 0.0;
+      q = 0.0;
+      m = 0.0;
+
+      constructor(p, s, q, m) {
+        this.p = p;
+        this.s = s;
+        this.q = q;
+        this.m = m;
+      }
+    }
+    class TrxObj {
+      debs = {};
+      q = {
+        t: "parts",
+        a: 0.0
+      };
+      qt = 1.0;
+      a = 0.0;
+      cred = "";
+      constructor(debs, q, qt, a, cred) {
+        this.debs = debs;
+        this.a = a;
+        this.cred = cred;
+        this.q = q;
+        this.qt = qt;
+      }
+      getAmountQT() {
+        return this.qt * this.q.a;
+      }
+    }
+    function getMapVal(map, key, def) {
+      console.log("getMapVal", key, typeof (key))
+      
+      if (!map.hasOwnProperty(key) || map[key] == null || map[key]) return def;
+      return map[key];
+    }
+    function trxFromSnap(snap) {
+      return new TrxObj(snap.debs,
+        snap.q,
+        getMapVal(snap, "qt", 1.0),
+        getMapVal(snap, "a", 0.0),
+        snap["cred"]
+      );
+    }
+    function calculate(currTrx) {
+      console.log("start",currTrx)
+      // calculate basequota
+      // console.log("debs", currTrx.debs.values())
+      // const values = Array.from(currTrx.debs.values()).reduce( (a,b)=> a+b,baseQuota);
+      // console.log(values);
+      var parts = 0
+      for (const key in currTrx.debs) {
+        parts += currTrx.debs[[key]];
+      }
+      console.log("parts",parts);
+      
+      const updatesMember = {};
+      for (const key in currTrx.debs) {
+        const walletMember = new WalletMember(0, 0, 0, 0);
+        const part = currTrx.debs[[key]];
+        console.log("part", part);
+        
+        walletMember.d = currTrx.qt * part * currTrx.q.a;
+        
+        console.log(" a ",currTrx.cred , key, currTrx.cred === key)
+        if (currTrx.cred === key) {
+          walletMember.p = currTrx.qt * part * currTrx.q.a;
+        }
+        walletMember.q = walletMember.p - walletMember.d;
+        updatesMember[[key]] = walletMember;
+        console.log(key, updatesMember)
+      }
+
+
+    }
+
+    console.log("start", input.cred)
+    const currTrx = trxFromSnap(input)
+    calculate(currTrx)
+  </script>
+</body>
+
+</html>

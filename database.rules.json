@@ -1,0 +1,44 @@
+{
+  "rules": {
+    ".read": "auth.uid !== null",
+    ".write": "auth.uid !== null",
+    "credits": {
+      "$c_id": {
+        ".write": "false"
+      }
+    },
+    "wallets": {
+      "$walletId": {
+        ".read": "auth.uid !== null && data.child('acl/r').child(auth.id).val() === true",
+        ".write": "auth.uid !== null && data.child('acl/w').child(auth.id).val() === true",
+        "acl": {
+          ".indexOn": [
+            "r",
+            "w"
+          ]
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 3 && newData.val().length <= 35"
+        },
+      
+      },
+      ".indexOn": [
+        "creator",
+        "created",
+        "sl"
+      ]
+    },
+    "purchases": {
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        ".write": "auth.uid === $uid"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        ".write": "auth.uid === $uid"
+      }
+    }
+  }
+}

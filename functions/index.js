@@ -550,6 +550,24 @@ exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}")
     return snap;
   });
 
+exports.trxDelete = functions.database.ref("/transactions/{walletId}/{trxId}").onDelete((snap, context) => {
+  console.log(JSON.stringify(snap.val()));
+  const _walletId = context.params.walletId;
+  const trx = trxFromSnap(snap.val());
+
+  const updates = calculate(trx).walletUPD;
+  var finalupdates = {};
+  for (const key in updates) {
+    const member = updates[key].subtract();
+    finalupdates[key] = member;
+  }
+  console.log(finalupdates);
+
+  updateWalletQuotaLast(_walletId, finalupdates);
+  return snap;
+})
+
+
 exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}")
   .onCreate((snap, context) => {
     const _walletId = context.params.walletId;
@@ -848,6 +866,13 @@ class WalletMember {
     this.s = round3Dec(s);
     this.m = round3Dec(m);
     this.q = p - s + m;
+  }
+  subtract() {
+    this.p *= -1;
+    this.s *= -1;
+    this.m *= -1;
+    this.q *= -1;
+    return this;
   }
   toMap() {
     return {

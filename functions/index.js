@@ -693,7 +693,7 @@ function round2Dec(num) {
 }
 
 function round3Dec(num) {
-  return Math.round((num) * 1000) / 1000
+  return (Math.round((num) * 100000) / 100000)
 
 }
 

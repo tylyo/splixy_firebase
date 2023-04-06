@@ -416,11 +416,9 @@ exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/joinreq/
     const updates = {};
 
     updates[COLLECTION_WALLETS + PATH_SEPARATOR + walletId + "/acl/r/" + uid] = true;
-    const walletJoinReqPath = [COLLECTION_JOINREQUEST, uid, sharedLinkID].join(PATH_SEPARATOR);
-    updates[walletJoinReqPath + "/gid"] = walletId;
-    updates[walletJoinReqPath + "/t"] = wallet.name;
-    updates[walletJoinReqPath + "/pvp"] = wallet.rules.pvp;
-    updates[walletJoinReqPath + "/dr"] = currentTM();
+
+    const walletJoinReqPath = [COLLECTION_USERS, uid, "joinreq", sharedLinkID, "id"].join(PATH_SEPARATOR);
+    updates[walletJoinReqPath + "/id"] = walletId;
     console.log("updates: " + JSON.stringify(updates));
     await adminDB.ref().update(updates);
 
@@ -428,7 +426,14 @@ exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/joinreq/
   });
   return snap.ref;
 });
-
+exports.userjoinedWallet = functions.database.ref("/wallets/{walletId}/acl/r/{uid}").onWrite(async (change, context) => {
+  var nextVal = change.after.val();
+  var authId = context.params.uid;
+  if (nextVal !== undefined && nextVal === true) {
+    adminDB.ref(COLLECTION_JOINREQUEST).child(authId).child(walletId).remove()
+    return change;
+  }
+});
 // USER SELECT the player on thje wallet joined
 exports.joinwalletAsPlayer = functions.database.ref("/wallets/{walletId}/teams/{teamId}/players/{playerId}/u").onWrite(async (change, context) => {
   if (context.authType !== undefined && context.authType === "ADMIN") {
@@ -490,14 +495,19 @@ const fld_creditor = "cred";
 const fld_members = "quotas";
 
 function trxFromSnap(map, key) {
-  return new TrxObj(key,
-    map.t,
-    map.debs,
-    map.q,
-    map.qt,
-    map.a,
-    map.cred
-  );
+  try {
+
+    return new TrxObj(key,
+      map.t,
+      map.debs,
+      {"a": map.q["a"], "t":map.q['t'] },
+      map.qt,
+      map.a,
+      map.cred
+    );
+  } catch (err) {
+      console.error(key,err)
+  }
 }
 
 exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuota/").onWrite((change, context) => {
@@ -562,6 +572,7 @@ exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}")
     var before = snap.before.val();
     var updated = snap.after.val();
     const currTrx = trxFromSnap(before, snap.key)
+
     const nextTrx = trxFromSnap(updated, snap.key)
     trxUpdateToWallet(walletId, currTrx, nextTrx)
     return snap;
@@ -718,7 +729,7 @@ function calculate(currTrx) {
     // calculate basequota
     updatesMember[credKey] = new WalletMember(credKey, paid, 0, 0);
     var quotaAmount = round3Dec(paid / parts);
-    if (quotaAmount !== round3Dec(currTrx.q.a)) console.warn(trxId, "QUOTA DIVERSA QUELLA REGISTRATA", currTrx.qt, paid, parts, quotaAmount, currTrx.q.a);
+    if (quotaAmount !== round3Dec(currTrx.q.a)) console.warn(trxId, "QUOTA DIVERSA QUELLA REGISTRATA", quotaAmount, currTrx.q.a, currTrx.qt + "*" + paid +"*"+ parts, );
     for (const key in currTrx.debs) {
 
       const part = currTrx.debs[[key]];
@@ -728,6 +739,7 @@ function calculate(currTrx) {
       if (updatesMember.hasOwnProperty(key)) {
         result = new WalletMember(key, paid, debt, 0);
       }
+      result.trx += 1
       updatesMember[key] = result;
     }
     const delta = round3Dec(paid) - round3Dec(quotaCheck)
@@ -759,7 +771,7 @@ function calculate(currTrx) {
   // console.log("calculate endloop ", trxType, updatesMember)
   return {
     "walletUPD": updatesMember,
-    "quota": quotaAmount
+    "quota": (quotaAmount !== round3Dec(currTrx.q.a)) ? quotaAmount : 0,
   };
 }
 
@@ -773,10 +785,19 @@ function trxUpdateToWallet(walletId, currTrx, nextTrx) {
   nextDebitors = trxDebsRemove(currDebitors, nextDebitors);
   var updatesMember = {};
   for (const key in nextDebitors) {
-    console.log("updateWalletQuotaLast LOOP", key, currCalc[key].s, nextCalc[key].s, currCalc[key].s - nextCalc[key].s);
-    const paid = nextCalc[key].p - currCalc[key].p
-    const debt = nextCalc[key].s - currCalc[key].s
-    const move = nextCalc[key].m - currCalc[key].m
+    console.log("curr",key, JSON.stringify(currCalc[key]));
+    console.log("next",key, JSON.stringify(nextCalc[key]));
+    if (currCalc[key] === undefined) {
+      currCalc[key] = new WalletMember(0, 0, 0, 0);
+    }
+    if (nextCalc[key] === undefined) {
+      nextCalc[key] = new WalletMember(0, 0, 0, 0);
+    }
+    const currS = currCalc[key].hasOwnProperty('s') ? currCalc[key].s : 0;
+    console.log("updateWalletQuotaLast LOOP", key, currS, nextCalc[key].s, currS - nextCalc[key].s);
+    const paid = nextCalc[key].p - currCalc[key].p;
+    const debt = nextCalc[key].s - currS;
+    const move = nextCalc[key].m - currCalc[key].m;
     updatesMember[key] = new WalletMember(key, paid, debt, move);
 
 
@@ -787,18 +808,25 @@ function trxUpdateToWallet(walletId, currTrx, nextTrx) {
 
 function walletQuotasCalculate(walletId, trxList) {
   var updatesMember = {};
+  var updatesTrxQuota = {};
   console.log("walletQuotasCalculate - START ");
   var cc = 0;
   for (const trxId in trxList) {
-    cc = cc + 1
+    cc += 1;
     const nextTrx = trxFromSnap(trxList[trxId], trxId);
+    
+    // console.log("check", nextTrx.q, JSON.stringify(trxList[trxId]))
     const trxType = nextTrx.t;
-    const nextCalc = calculate(nextTrx).walletUPD;
-
+    const calcolo = calculate(nextTrx);
+    if (calcolo.quota > 0) {
+      adminDB.ref(COLLECTION_TRANSACTIONS).child(walletId).child(trxId).child("q/a").set(calcolo.quota)
+    }
+    const nextCalc = calcolo.walletUPD;
+    
     for (const key in nextCalc) {
 
       // console.log("walletQuotasCalculate LOOP", key)
-      var prevCalc = new WalletMember(key, 0, 0, 0);
+      var prevCalc = new WalletMember(key, 0, 0, 0,cc);
       if (updatesMember.hasOwnProperty(key)) {
         prevCalc = updatesMember[key];
       }
@@ -808,7 +836,7 @@ function walletQuotasCalculate(walletId, trxList) {
       const debt = prevCalc.s + nextCalc[key].s;
       const move = prevCalc.m + nextCalc[key].m;
 
-      updatesMember[key] = new WalletMember(key, paid, debt, move);
+      updatesMember[key] = new WalletMember(key, paid, debt, move,cc);
 
       // if (key === "0xDwg3qHwj") {
       //   console.log("walletQuotasCalculate LOOP", cc, "fine", key, updatesMember[key])
@@ -875,13 +903,15 @@ class WalletMember {
   s = 0.0;
   q = 0.0;
   m = 0.0;
+  trx = 0;
 
-  constructor(uid, p, s, m) {
+  constructor(uid, p, s, m,trx = 0) {
     this.uid = uid;
     this.p = round3Dec(p);
     this.s = round3Dec(s);
     this.m = round3Dec(m);
     this.q = round3Dec(p - s + m);
+    this.trx = trx;
   }
   subtract() {
     this.p *= -1;
@@ -896,6 +926,7 @@ class WalletMember {
     this.s += round3Dec(member.s);
     this.m += round3Dec(member.m);
     this.q = round3Dec(this.p - this.s + this.m);
+    this.trx += 1;
     // console.log("add end ", this);
   }
   toMap() {
@@ -904,6 +935,7 @@ class WalletMember {
       "s": this.s,
       "m": this.m,
       "q": this.q,
+      "trx":this.trx
     };
   }
   toStr() {
@@ -927,7 +959,8 @@ class TrxObj {
     this.debs = debs;
     this.a = round3Dec(amount);
     this.cred = creditor;
-    this.q = round3Dec(quota);
+    this.q = quota;
+    this.q.a = round3Dec(quota['a'])
     this.qt = quantity;
   }
   getAmountQT() {
@@ -941,10 +974,12 @@ function trxDebsRemove(currDebitors, nextDebitors) {
   const oldKeys = Object.keys(currDebitors)
   const updKeys = Object.keys(nextDebitors)
 
+  console.log("trxDebsRemove", JSON.stringify(oldKeys), JSON.stringify(updKeys), )
   const filteredKeys = oldKeys.filter(x => !updKeys.includes(x))
   if (filteredKeys.length > 0) {
     for (var ko in oldKeys) {
-      nextDebitors[ko] = 0.0
+      console.log(oldKeys[ko], "-> 0")
+      nextDebitors[oldKeys[ko]] = 0.0
     }
 
   }

@@ -14,20 +14,31 @@
     },
     "purchases": {
       "$uid": {
-        ".read": "auth.uid === $uid",
-        ".write": "auth.uid === $uid"
+        ".read": "auth !== null && auth.uid === $uid",
+        ".write": "auth !== null && auth.uid === $uid"
+      }
+    },
+    "transactions": {
+      "$wid": {
+        "$trxId": {
+          ".read": "auth.uid !== null && root.child('wallets').child($wid).child('acl/r').child(auth.uid).val() === true",
+          ".write": "auth.uid !== null && root.child('wallets').child($wid).child('acl/w').child(auth.uid).val() === true",
+          "a": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          }
+        }
       }
     },
     "users": {
       "$uid": {
-        ".read": "auth.uid === $uid",
-        ".write": "auth.uid === $uid"
+        ".read": "auth !== null && auth.uid === $uid",
+        ".write": "auth !== null && auth.uid === $uid"
       }
     },
     "wallets": {
       "$walletId": {
-        ".read": "auth.uid !== null && data.child('acl/r').child(auth.id).val() === true",
-        ".write": "auth.uid !== null && data.child('acl/w').child(auth.id).val() === true",
+        ".read": "auth.uid !== null && data.child('acl/r').child(auth.uid).val() === true",
+        ".write": "auth.uid !== null && data.child('acl/w').child(auth.uid).val() === true",
         "acl": {
           ".indexOn": [
             "r",

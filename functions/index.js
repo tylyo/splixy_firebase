@@ -536,7 +536,7 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
       if (trxList === undefined || trxList === null) return;
       // console.log(trxList === undefinedObject.entries(trxList).size)
       const updatesMember = walletQuotasCalculate(walletId, trxList);
-      var updates = {}
+      var updates = {"trxCount":trxList.length}
       for (const k in members) {
         var memberValues = updatesMember[k];
         if (memberValues === undefined) {
@@ -561,8 +561,7 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
   return change.after.ref;
 });
 
-exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}")
-  .onUpdate((snap, context) => {
+exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}").onUpdate((snap, context) => {
 
     console.log("trxUpdate", "START")
     var walletId = context.params.walletId;
@@ -596,8 +595,7 @@ exports.trxDelete = functions.database.ref("/transactions/{walletId}/{trxId}").o
 })
 
 
-exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}")
-  .onCreate((snap, context) => {
+exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").onCreate((snap, context) => {
     const _walletId = context.params.walletId;
     const _trxId = context.params.trxId;
     var newKey = snap.key;

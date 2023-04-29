@@ -530,13 +530,16 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
       members[k] = new WalletMember(k, 0, 0, 0);
     }
     adminDB.ref(COLLECTION_TRANSACTIONS).child(walletId).once('value', (snap, _) => {
-      // console.log("walletUpdateQuotas trxList:", snap.val());
       const trxList = snap.val();
+      const trxKeys = Object.keys(trxList);
+      console.log("walletUpdateQuotas trxList:", trxKeys.length);
 
       if (trxList === undefined || trxList === null) return;
       // console.log(trxList === undefinedObject.entries(trxList).size)
       const updatesMember = walletQuotasCalculate(walletId, trxList);
-      var updates = {"trxCount":trxList.length}
+      var updates = {}
+      updates["trxCount"] = trxKeys.length;
+
       for (const k in members) {
         var memberValues = updatesMember[k];
         if (memberValues === undefined) {
@@ -590,7 +593,7 @@ exports.trxDelete = functions.database.ref("/transactions/{walletId}/{trxId}").o
   }
   console.log(finalupdates);
 
-  updateWalletQuotaLast(_walletId, finalupdates);
+  updateWalletQuotaLast(_walletId, finalupdates,-1);
   return snap;
 })
 
@@ -637,7 +640,9 @@ exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").o
     // }
     console.log("updates", updates)
     // snap.ref.update(updates);
-    updateWalletQuotaLast(_walletId, res.walletUPD)
+  updateWalletQuotaLast(_walletId, res.walletUPD,1)
+  
+    
     return snap;
   });
 
@@ -645,11 +650,17 @@ exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").o
 //   .onUpdate((snap, context) => {
 
 //   });
-function updateWalletQuotaLast(walletId, nextMembers) {
+function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
   adminDB.ref(COLLECTION_WALLETS).child(walletId).once('value', (snap, str) => {
-    const currMembers = snap.val()['quotas']
+    const walletMap = snap.val();
+    const currMembers = walletMap['quotas']
 
     // console.log("updateWalletQuotaLast START", currMembers,nextMembers);
+    var trxCount = 0;
+    if (Object.keys(walletMap)['trxCount'] !== undefined) {
+      trxCount = walletMap['trxCount'];
+      
+    }
 
     var finalMemberUpdates = {}
     for (const key in currMembers) {
@@ -659,7 +670,6 @@ function updateWalletQuotaLast(walletId, nextMembers) {
       // console.log("updateWalletQuotaLast LOOP curr", key, currM);
       // console.log("updateWalletQuotaLast LOOP next", key, nextM);
       // console.log("updateWalletQuotaLast LOOP", key, currM.quota, nextM.q, currM.quota + nextM.q);
-
       const prefix = "quotas/" + key;
       if (nextM !== undefined) {
 
@@ -678,6 +688,9 @@ function updateWalletQuotaLast(walletId, nextMembers) {
 
       }
 
+    }
+    if (delta != 0) {
+      finalMemberUpdates["trxCount"] = trxCount + delta;
     }
     console.log("updateWalletQuotaLast FINAL", finalMemberUpdates);
     snap.ref.update(finalMemberUpdates);

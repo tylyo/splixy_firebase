@@ -50,9 +50,9 @@
         }
       },
       ".indexOn": [
+        "sl",
         "creator",
-        "created",
-        "sl"
+        "created"
       ]
     }
   }

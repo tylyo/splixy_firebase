@@ -531,14 +531,22 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
     }
     adminDB.ref(COLLECTION_TRANSACTIONS).child(walletId).once('value', (snap, _) => {
       const trxList = snap.val();
-      const trxKeys = Object.keys(trxList);
-      console.log("walletUpdateQuotas trxList:", trxKeys.length);
-
-      if (trxList === undefined || trxList === null) return;
-      // console.log(trxList === undefinedObject.entries(trxList).size)
-      const updatesMember = walletQuotasCalculate(walletId, trxList);
+      console.log("walletUpdateQuotas trxList:", JSON.stringify(trxList));
       var updates = {}
-      updates["trxCount"] = trxKeys.length;
+      var updatesMember = {}
+      if (trxList === undefined || trxList === null) {
+        updates["trxCount"] = 0;
+        
+      } else {
+        
+        const trxKeys = Object.keys(trxList);
+        updates["trxCount"] = trxKeys.length;
+        console.log("walletUpdateQuotas trxList:", trxKeys.length);
+  
+        // console.log(trxList === undefinedObject.entries(trxList).size)
+        updatesMember = walletQuotasCalculate(walletId, trxList);
+      }
+
 
       for (const k in members) {
         var memberValues = updatesMember[k];
@@ -546,8 +554,7 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
           memberValues = members[k];
         }
         for (const f in memberValues) {
-          const fieldValue = memberValues[f]
-          updates["quotas/" + k + "/" + f] = fieldValue;
+          updates["quotas/" + k + "/" + f] = memberValues[f];
         }
       }
 

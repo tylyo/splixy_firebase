@@ -135,7 +135,15 @@ exports.walletCreate = functions.database.ref("/" + COLLECTION_WALLETS + "/{wall
   // return await snap.ref.update(creationUpdates);
   return snap;
 });
+exports.walletCreate = functions.database.ref("/" + COLLECTION_WALLETS + "/{walletId}").onDelete((snap, context) => {
+  // // var walletId = context.params.walletId
+  // // const log = new LogEvent(context, "wallet", walletId)
 
+  console.log("val: " + JSON.stringify(snap.val()));
+
+  // return await snap.ref.update(creationUpdates);
+  return snap;
+});
 
 exports.walletNameUpdate = functions.database.ref("/wallets/{walletId}/name").onUpdate((change, context) => {
   console.log("walletNameUpdate start");
@@ -429,6 +437,7 @@ exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/joinreq/
 exports.userjoinedWallet = functions.database.ref("/wallets/{walletId}/acl/r/{uid}").onWrite(async (change, context) => {
   var nextVal = change.after.val();
   var authId = context.params.uid;
+  var walletId = context.params.walletId;
   if (nextVal !== undefined && nextVal === true) {
     adminDB.ref(COLLECTION_JOINREQUEST).child(authId).child(walletId).remove()
     return change;
@@ -626,16 +635,16 @@ exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").o
       // snap.ref.child("f").set("item");
     }
     const nextTrx = trxFromSnap(newVal, newKey)
-    console.log("created: ", {
+    console.log("created newVal: ", JSON.stringify({
       [_walletId]: {
         [_trxId]: newVal
       }
-    });
-    console.log("created: ", {
+    }));
+    console.log("created: nextTrx", JSON.stringify({
       [_walletId]: {
         [_trxId]: nextTrx
       }
-    });
+    }));
 
 
 
@@ -647,7 +656,7 @@ exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").o
     // }
     console.log("updates", updates)
     // snap.ref.update(updates);
-  updateWalletQuotaLast(_walletId, res.walletUPD,1)
+    updateWalletQuotaLast(_walletId, res.walletUPD,1)
   
     
     return snap;
@@ -699,6 +708,9 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
     if (delta != 0) {
       finalMemberUpdates["trxCount"] = trxCount + delta;
     }
+    
+    finalMemberUpdates["updated"] = currentTM();
+
     console.log("updateWalletQuotaLast FINAL", finalMemberUpdates);
     snap.ref.update(finalMemberUpdates);
     // .update(finalMemberUpdates);

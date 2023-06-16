@@ -1,0 +1,50 @@
+<html>
+    <title>BAP - Breast Augmentation Support</title>
+    <script src="js/jquery-3.6.0.min.js"></script>
+
+    <style type="text/css">
+       body{
+            background-color:#D1BA91;
+              color: black;
+
+       } 
+       .main{
+           margin: auto;
+           width:540px;
+           /* height: 00px; */
+           
+       }
+        .container{
+            background-color:white;
+            color:black;
+            border: 1px solid #333;
+            box-shadow: 8px 8px 5px #444;
+            border-radius: 8px;
+            border-color: blanchedalmond;
+            padding: 20px;
+            padding-bottom: 40px;
+
+        }
+        .button{
+            border: 1px solid #333;
+            box-shadow: 8px 8px 5px #444;
+            border-radius: 8px;
+            border-color: blanchedalmond;
+        }
+</style>
+<script  type="text/javascript">
+    $('#btnSupport').click(function (event) {
+            window.open('mailto:test@example.com');
+
+        });
+</script>
+    <body>
+        <div class="main">
+            <h2>BAP  Breast Augmentation Implant Planner</h2>
+            <div class="container">
+                In order to contact the team please write an email to 
+                <div id="btnSupport" class="button">per.heden.app@gmail.com</a>
+            </div>
+        </div>
+    </body>
+</html>

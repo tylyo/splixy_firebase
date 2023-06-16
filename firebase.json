@@ -54,7 +54,17 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "public": "public"
+    "public": "public",
+    "rewrite": [
+      {
+        "destination": "/privacy.html",
+        "source": "/privacy"
+      },
+      {
+        "destination": "/support.html",
+        "source": "/support"
+      }
+    ]
   },
   "remoteconfig": {
     "template": "remoteconfig.template.json"

@@ -21,6 +21,7 @@
     "transactions": {
       "$wid": {
         "$trxId": {
+          ".indexOn":["t","date"],
           ".read": "auth.uid !== null && root.child('wallets').child($wid).child('acl/r').child(auth.uid).val() === true",
           ".write": "auth.uid !== null && root.child('wallets').child($wid).child('acl/w').child(auth.uid).val() === true",
           "a": {

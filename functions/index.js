@@ -535,9 +535,14 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
   }).then((value) => {
     console.log("quotas", value.val());
     var members = {}
+    var memberKeys = [];
     for (const k in value.val()) {
       members[k] = new WalletMember(k, 0, 0, 0);
+      if (!memberKeys.includes(k)) {
+        memberKeys.push(k);
+      }
     }
+    // const memberKeys = Array.from( members.keys() );
     adminDB.ref(COLLECTION_TRANSACTIONS).child(walletId).once('value', (snap, _) => {
       const trxList = snap.val();
       console.log("walletUpdateQuotas trxList:", JSON.stringify(trxList));
@@ -553,7 +558,7 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
         console.log("walletUpdateQuotas trxList:", trxKeys.length);
   
         // console.log(trxList === undefinedObject.entries(trxList).size)
-        updatesMember = walletQuotasCalculate(walletId, trxList);
+        updatesMember = walletQuotasCalculate(walletId, trxList,memberKeys);
       }
 
 
@@ -836,7 +841,7 @@ function trxUpdateToWallet(walletId, currTrx, nextTrx) {
   updateWalletQuotaLast(walletId, updatesMember);
 }
 
-function walletQuotasCalculate(walletId, trxList) {
+function  walletQuotasCalculate(walletId, trxList,memberKeys) {
   var updatesMember = {};
   var updatesTrxQuota = {};
   console.log("walletQuotasCalculate - START ");
@@ -844,7 +849,7 @@ function walletQuotasCalculate(walletId, trxList) {
   for (const trxId in trxList) {
     cc += 1;
     const nextTrx = trxFromSnap(trxList[trxId], trxId);
-    
+
     // console.log("check", nextTrx.q, JSON.stringify(trxList[trxId]))
     const trxType = nextTrx.t;
     const calcolo = calculate(nextTrx);
@@ -950,7 +955,7 @@ class WalletMember {
     this.q *= -1;
     return this;
   }
-  add(member) {
+  add(member,trxId) {
     // console.log("add", member);
     this.p += round3Dec(member.p);
     this.s += round3Dec(member.s);

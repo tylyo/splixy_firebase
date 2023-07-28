@@ -263,35 +263,35 @@ function walletUpdatedRefresh(walletId) {
 // });
 
 
-exports.beforeSignIn = functions.auth.user().beforeSignIn((userRecord, context) => {
-  // console.log("authUser - userRecord:" + userRecord.toJSON());
-  // })
-  // exports.updateUserBounds = functions.https.onCall((data, context) => {
-  console.log("authUser -- start --");
+// exports.beforeSignIn = functions.auth.user().beforeSignIn((userRecord, context) => {
+//   // console.log("authUser - userRecord:" + userRecord.toJSON());
+//   // })
+//   // exports.updateUserBounds = functions.https.onCall((data, context) => {
+//   console.log("authUser -- start --");
 
-  const uid = userRecord.uid;
-  const email = userRecord.email;
-  let _displayName = userRecord.displayName;
-  if (_displayName === undefined || userRecord.displayName === null) {
-    _displayName = "Player";
-  }
-  const providerId = userRecord.providerData[0].providerId;
-  console.log("uid:%s email:%s", uid, email);
-  if (email !== undefined) {
-    console.log(_displayName);
-    _displayName = email.split("@")[0].replace(".", " ");
-    userRecord.displayName = _displayName;
-  }
-  console.log("providerId %s, email:%s, displayName:%s",
-    providerId, email, _displayName);
-  adminDB.ref(COLLECTION_USERS + PATH_SEPARATOR + uid + PATH_SEPARATOR).update({
-    "displayName": _displayName,
-    "a": "323023232323",
+//   const uid = userRecord.uid;
+//   const email = userRecord.email;
+//   let _displayName = userRecord.displayName;
+//   if (_displayName === undefined || userRecord.displayName === null) {
+//     _displayName = "Player";
+//   }
+//   const providerId = userRecord.providerData[0].providerId;
+//   console.log("uid:%s email:%s", uid, email);
+//   if (email !== undefined) {
+//     console.log(_displayName);
+//     _displayName = email.split("@")[0].replace(".", " ");
+//     userRecord.displayName = _displayName;
+//   }
+//   console.log("providerId %s, email:%s, displayName:%s",
+//     providerId, email, _displayName);
+//   adminDB.ref(COLLECTION_USERS + PATH_SEPARATOR + uid + PATH_SEPARATOR).update({
+//     "displayName": _displayName,
+//     "a": "323023232323",
 
-  });
+//   });
 
-  return userRecord;
-});
+//   return userRecord;
+// });
 
 // l'utente che clicca sul link chiede di partecipare al gioco.
 // aggiorna wallets/walletId/request/uid
@@ -547,12 +547,12 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
       var updates = {}
       var updatesMember = {}
       if (trxList === undefined || trxList === null) {
-        updates["trxount"] = 0;
+        updates["trxCount"] = 0;
         
       } else {
         
         const trxKeys = Object.keys(trxList);
-        updates["trxount"] = trxKeys.length;
+        updates["trxCount"] = trxKeys.length;
         console.log("walletUpdateQuotas trxList:", trxKeys.length);
   
         // console.log(trxList === undefinedObject.entries(trxList).size)
@@ -650,6 +650,7 @@ exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").o
 
     const res = calculate(nextTrx);
 
+    console.log("res", res)
     console.log("updates", updates)
 
     updateWalletQuotaLast(_walletId, res.walletUPD, 1)
@@ -680,7 +681,7 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
       const currM = currMembers[key];
       const nextM = nextMembers[key];
       // console.log("updateWalletQuotaLast LOOP curr", key, currM);
-      // console.log("updateWalletQuotaLast LOOP next", key, nextM);
+      console.log("updateWalletQuotaLast LOOP next", key, nextM);
       // console.log("updateWalletQuotaLast LOOP", key, currM.quota, nextM.q, currM.quota + nextM.q);
       const prefix = "quotas/" + key;
       if (nextM !== undefined) {
@@ -691,15 +692,17 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
         // }
         finalMemberUpdates[prefix + "/q"] = currM.q + nextM.q;
         finalMemberUpdates[prefix + "/m"] = currM.m + nextM.m;
+        finalMemberUpdates[prefix + "/trxc"] = currM.trxc + nextM.trxc;
       } else {
         finalMemberUpdates[prefix + "/p"] = currM.p;
         finalMemberUpdates[prefix + "/s"] = currM.s;
         // }
         finalMemberUpdates[prefix + "/q"] = currM.q;
         finalMemberUpdates[prefix + "/m"] = currM.m;
+        finalMemberUpdates[prefix + "/trxc"] = currM.trxc;
         
       }
-      finalMemberUpdates[prefix + "/trxc"] = currM.trxc + nextM.trxc;
+
     }
     if (delta != 0) {
       finalMemberUpdates["trxCount"] = trxCount + delta;
@@ -761,9 +764,9 @@ function calculate(currTrx) {
       const part = currTrx.debs[[key]];
       const debt = round3Dec(part * quotaAmount);
       quotaCheck += debt;
-      var result = new WalletMember(key, 0, debt, 0,1);
+      var result = new WalletMember(key, 0, debt, 0, 1);
       if (updatesMember.hasOwnProperty(key)) {
-        result = new WalletMember(key, paid, debt, 1, 1);
+        result = new WalletMember(key, paid, debt, 0, 1);
       }
       // result.trxc += 1
       updatesMember[key] = result;
@@ -839,7 +842,7 @@ function trxUpdateToWallet(walletId, currTrx, nextTrx) {
 function  walletQuotasCalculate(walletId, trxList,memberKeys) {
   var updatesMember = {};
   var updatesTrxQuota = {};
-  console.log("walletQuotasCalculate - START ");
+  console.log("walletQuotasCalculate - START");
   var cc = 0;
   for (const trxId in trxList) {
     cc += 1;

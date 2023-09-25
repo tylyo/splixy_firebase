@@ -161,6 +161,7 @@ exports.walletNameUpdate = functions.database.ref("/wallets/{walletId}/name").on
 
 });
 
+
 function walletUpdatedRefresh(walletId) {
   const path_updated = [COLLECTION_WALLETS, walletId, "updated"].join(PATH_SEPARATOR);
   adminDB.ref("/wallets/" + walletId + "/updated").set(currentTM());

@@ -759,6 +759,9 @@ function calculate(currTrx) {
     // calculate basequota
     updatesMember[credKey] = new WalletMember(credKey, paid, 0, 0, 1);
     var quotaAmount = round3Dec(paid / parts);
+    if (currTrx.q.t == "perc")
+      quotaAmount *= 100;
+
     if (quotaAmount !== round3Dec(currTrx.q.a)) console.warn(trxId, "QUOTA DIVERSA QUELLA REGISTRATA", quotaAmount, currTrx.q.a, currTrx.qt + "*" + paid +"*"+ parts, );
     for (const key in currTrx.debs) {
 

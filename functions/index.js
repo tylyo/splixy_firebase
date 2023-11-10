@@ -297,7 +297,7 @@ function walletUpdatedRefresh(walletId) {
 // l'utente che clicca sul link chiede di partecipare al gioco.
 // aggiorna wallets/walletId/request/uid
 // TODO:TO REMOVE
-exports.askToJoinwallet = functions.database.ref("/users/{uid}/wallets/{walletId}/requests/")
+exports.askToJoinWallet = functions.database.ref("/users/{uid}/wallets/{walletId}/requests/")
   .onWrite(async (change, context) => {
     if (!change.before.exists()) {
       const walletId = context.params.walletId;
@@ -318,11 +318,11 @@ exports.askToJoinwallet = functions.database.ref("/users/{uid}/wallets/{walletId
       adminDB.ref(COLLECTION_WALLETS).child(walletId).child("requests").child(uid).set(userInfo);
     }
     if (!change.after.exists()) {
-      console.log("askToJoinwallet Deleted node: " + change.before.key);
+      console.log("askToJoinWallet Deleted node: " + change.before.key);
     } else if (change.before.exists()) {
-      console.log("askToJoinwallet Updated node: " + change.after.key);
+      console.log("askToJoinWallet Updated node: " + change.after.key);
     } else {
-      console.log("askToJoinwallet boh: ");
+      console.log("askToJoinWallet boh: ");
     }
     return change.after.ref;
   });
@@ -746,9 +746,11 @@ function calculate(currTrx) {
   const trxType = currTrx.t;
   const credKey = currTrx.cred;
   const paid = round3Dec(currTrx.a * currTrx.qt);
-  var parts = 0
-  for (const key in currTrx.debs) {
-    parts += currTrx.debs[key];
+  var parts = 100
+  if (currTrx.q.t == "parts") { 
+    for (const key in currTrx.debs) {
+      parts += currTrx.debs[key];
+    }
   }
 
   if (currTrx.qt > 1) console.info(trxId, "QUANTITY CHECK", currTrx.qt)
@@ -758,14 +760,13 @@ function calculate(currTrx) {
   if (trxType == 'item') {
     // calculate basequota
     updatesMember[credKey] = new WalletMember(credKey, paid, 0, 0, 1);
-    var quotaAmount = round3Dec(paid / parts);
-    if (currTrx.q.t == "perc")
-      quotaAmount *= 100;
+    var quotaAmount = 1;
+    quotaAmount = round3Dec(paid / parts);
 
     if (quotaAmount !== round3Dec(currTrx.q.a)) console.warn(trxId, "QUOTA DIVERSA QUELLA REGISTRATA", quotaAmount, currTrx.q.a, currTrx.qt + "*" + paid +"*"+ parts, );
     for (const key in currTrx.debs) {
 
-      const part = currTrx.debs[[key]];
+      const part = currTrx.debs[[key]]; 
       const debt = round3Dec(part * quotaAmount);
       quotaCheck += debt;
       var result = new WalletMember(key, 0, debt, 0, 1);

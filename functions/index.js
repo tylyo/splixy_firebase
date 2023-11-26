@@ -7,6 +7,16 @@ const {
   credential,
   database
 } = require("firebase-admin");
+require("firebase-functions/logger/compat");
+// const {
+//   log,
+//   info,
+//   debug,
+//   warn,
+//   error,
+//   write,
+// } = require("firebase-functions/logger");
+
 // const {DataSnapshot} = require("firebase-functions/v1/database");
 // const {instance, DataSnapshot} = require("firebase-functions/v1/database");
 admin.initializeApp(functions.config().firebase);
@@ -76,11 +86,7 @@ function buildCreationParams(context) {
   const updates = {};
   const uidACL = {};
   uidACL[uid] = true;
-  // const creationACL = {
-  //     "r": uidACL,
-  //     "w": uidACL,
-  //     "c": uidACL,
-  // };
+
   updates["acl/r/" + uid + PATH_SEPARATOR] = true;
   updates["acl/w/" + uid + PATH_SEPARATOR] = true;
   updates["acl/c/"] = uidACL;
@@ -135,7 +141,7 @@ exports.walletCreate = functions.database.ref("/" + COLLECTION_WALLETS + "/{wall
   // return await snap.ref.update(creationUpdates);
   return snap;
 });
-exports.walletCreate = functions.database.ref("/" + COLLECTION_WALLETS + "/{walletId}").onDelete((snap, context) => {
+exports.walletDelete = functions.database.ref("/" + COLLECTION_WALLETS + "/{walletId}").onDelete((snap, context) => {
   // // var walletId = context.params.walletId
   // // const log = new LogEvent(context, "wallet", walletId)
 
@@ -167,132 +173,6 @@ function walletUpdatedRefresh(walletId) {
   adminDB.ref("/wallets/" + walletId + "/updated").set(currentTM());
 }
 
-// exports.teamNameUpdate = functions.database.ref("/wallets/{walletId}/teams/{teamId}/name").onUpdate((change, context) => {
-//   console.log("teamNameUpdate start");
-//   const walletId = context.params.walletId;
-//   const changed = change.after;
-//   if (changed.length === 0) {
-//     change.after = change.before;
-//   } else if (changed.length > 20) {
-//     change.after = changed.substring(0, 20);
-//   }
-
-//   walletUpdatedRefresh(walletId);
-//   // const log = new LogEvent(context, "wallet", walletId)
-//   // log.write("update Team", "player:" + teamId + PATH_SEPARATOR + playerId + " with " + change.after)
-//   return change;
-
-// });
-
-// exports.playerNameUpdate = functions.database.ref("/wallets/{walletId}/teams/{teamId}/players/{playerId}/name").onUpdate((change, context) => {
-//   const walletId = context.params.walletId;
-//   // const teamId = context.params.teamId;
-//   // const playerId = context.params.playerId;
-//   console.log("playerNameUpdate start");
-
-//   const changed = change.after;
-//   if (changed.length === 0) {
-//     change.after = change.before;
-//   } else if (changed.length > 20) {
-//     change.after = changed.substring(0, 20);
-//   }
-
-//   walletUpdatedRefresh(walletId);
-//   // const log = new LogEvent(context, "wallet", walletId)
-//   // log.write("update Team", "player:" + teamId + PATH_SEPARATOR + playerId + " with " + change.after)
-//   return change;
-// });
-
-
-
-// FIXME: to remove
-// exports.joinwallet = functions.https.onCall(async (data, context) => {
-//   const walletId = data.mid;
-//   const uid = context.auth.uid;
-
-//   console.log(JSON.stringify(data) + " - retrieve wallets/" + walletId + ",for:" + uid);
-//   try {
-//     const snap = await adminDB.ref(COLLECTION_WALLETS + "/" + walletId).once("value");
-//     if (snap === undefined) {
-//       return {};
-//     }
-//     console.log("add player:" + uid);
-//     await snap.ref.child("acl/r/" + uid).set(true);
-//     console.log("add wallet " + walletId + " to user" + uid);
-//     await adminDB.ref("users/" + uid).child("wallets/" + walletId).set(true);
-
-//     return {
-//       key: snap.key,
-//       value: snap.val(),
-//     };
-//   } catch (err) {
-//     throw new functions.https.HttpsError("something went wrong", "check the logs");
-//   }
-// });
-
-// // FIXME: to remove
-// exports.joinAsPlayer = functions.https.onCall(async (data, context) => {
-//   const variables = data.path;
-//   const values = variables.split("|");
-//   const walletId = values[0];
-//   const teamId = values[1];
-//   const playerId = values[2];
-//   const uid = context.auth.uid;
-
-//   const path = "/teams/" + teamId + "/players/";
-//   console.log(JSON.stringify(data) + " - retrieve wallets/" + path + ",for:" + uid);
-//   try {
-//     const snap = await adminDB.ref("wallets/" + walletId).once("value");
-//     if (snap === undefined) {
-//       return {};
-//     }
-//     console.log("add player:" + uid);
-//     const updates = {};
-//     updates["acl/r/" + uid] = true;
-//     updates["teams/" + teamId + "/players/" + playerId + "/uid"] = uid;
-//     await snap.ref.update(updates);
-//     console.log("add wallet " + path + " to user" + uid);
-//     await adminDB.ref("users/" + uid).child("wallets/" + walletId).set(true);
-
-//     return {
-//       key: snap.key,
-//       value: snap.val(),
-//     };
-//   } catch (err) {
-//     throw new functions.https.HttpsError("something went wrong", "check the logs");
-//   }
-// });
-
-
-// exports.beforeSignIn = functions.auth.user().beforeSignIn((userRecord, context) => {
-//   // console.log("authUser - userRecord:" + userRecord.toJSON());
-//   // })
-//   // exports.updateUserBounds = functions.https.onCall((data, context) => {
-//   console.log("authUser -- start --");
-
-//   const uid = userRecord.uid;
-//   const email = userRecord.email;
-//   let _displayName = userRecord.displayName;
-//   if (_displayName === undefined || userRecord.displayName === null) {
-//     _displayName = "Player";
-//   }
-//   const providerId = userRecord.providerData[0].providerId;
-//   console.log("uid:%s email:%s", uid, email);
-//   if (email !== undefined) {
-//     console.log(_displayName);
-//     _displayName = email.split("@")[0].replace(".", " ");
-//     userRecord.displayName = _displayName;
-//   }
-//   console.log("providerId %s, email:%s, displayName:%s",
-//     providerId, email, _displayName);
-//   adminDB.ref(COLLECTION_USERS + PATH_SEPARATOR + uid + PATH_SEPARATOR).update({
-//     "displayName": _displayName,
-//     "a": "323023232323",
-
-//   });
-
-//   return userRecord;
-// });
 
 // l'utente che clicca sul link chiede di partecipare al gioco.
 // aggiorna wallets/walletId/request/uid
@@ -326,50 +206,6 @@ exports.askToJoinWallet = functions.database.ref("/users/{uid}/wallets/{walletId
     }
     return change.after.ref;
   });
-
-// exports.activateRequest = functions.database.ref("/joinReq/{uid}/{shareLinkID}").onCreate((snap, context) => {
-
-//     const shareLinkID = context.params.shareLinkID;
-//     console.log("look for :" + shareLinkID);
-//     const uid = context.auth.uid;
-
-//     adminDB.ref(COLLECTION_WALLETS).orderByChild("sl").equalTo(shareLinkID).limitToFirst(1).get().then((snap) => {
-//         const wallets = snap.val();
-
-//         // console.log(JSON.stringify(snap.val()));
-//         if (wallets === undefined || wallets === null) {
-//             return;
-//         }
-//         const walletId = Object.keys(wallets)[0];
-//         const wallet = wallets[walletId];
-//         var updates = {};
-//         updates["wallets/" + walletId + "/acl/r/" + uid] = true;
-//         updates["joinReq/" + uid + PATH_SEPARATOR + shareLinkID + "/c"] = currentTM();
-//         updates["joinReq/" + uid + PATH_SEPARATOR + shareLinkID + "/gid"] = walletId;
-//         updates["joinReq/" + uid + PATH_SEPARATOR + shareLinkID + "/t"] = wallet.name;
-//         updates["joinReq/" + uid + PATH_SEPARATOR + shareLinkID + "/k"] = wallet.rules.pvp;
-//         updates["walletstats/" + uid + PATH_SEPARATOR + walletId + "/req"] = shareLinkID;
-
-//         console.log("updates: " + JSON.stringify(updates));
-//         adminDB.ref().update(updates);
-//     });
-//     return snap.ref
-// });
-
-// todo: To delete
-// exports.subonMatch = functions.database.ref("/users/{uid}/wallets/{walletId}/{teamId}/{playerId}/").onCreate((snap, context) => {
-//     console.log("subonMatch -- start --");
-//     const walletId = context.params.walletId;
-//     const teamId = context.params.teamId;
-//     const playerId = context.params.playerId;
-//     const uid = context.auth.uid;
-
-//     console.log("request: ", walletId, teamId, playerId);
-//     console.log(context.auth);
-//     const path_player = [COLLECTION_WALLETS, walletId, VAR_TEAMS,teamId,VAR_PLAYERS,playerId].join(PATH_SEPARATOR);
-//     adminDB.ref(path_player).set(uid);
-//     return snap.ref;
-// });
 
 
 exports.cleanTitle = functions.database.ref("/wallets/{walletId}/name}").onWrite((change, context) => {
@@ -406,11 +242,11 @@ SHARE wallet STEP 2
 - recupero il wallet dallo sharedlinkID
 - aggiorno l'acl/r del wallet con lo userId
 
-=> il player adesso può vedere il wallet e scegliere il giocatore con cui joinare
+=> il player adesso può vedere il wallet e scegliere il partecipante con cui joinare
 */
-exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/joinreq/{sl}").onWrite(async (snap, context) => {
+exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/"+COLLECTION_JOINREQUEST+"/{sl}").onWrite(async (snap, context) => {
   const sharedLinkID = context.params.sl;
-  const uid = context.auth.uid;
+  const uid = context.params.uid;
   console.log("usersSavewalletshareLink -- start --");
   console.log("request: ", uid, sharedLinkID);
   await adminDB.ref(COLLECTION_WALLETS).orderByChild("sl").equalTo(sharedLinkID).limitToFirst(1).get().then(async (snap) => {
@@ -423,11 +259,12 @@ exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/joinreq/
     const walletId = Object.keys(wallets)[0];
     const wallet = wallets[walletId];
     const updates = {};
+    console.log("request: ", uid, sharedLinkID);
 
     updates[COLLECTION_WALLETS + PATH_SEPARATOR + walletId + "/acl/r/" + uid] = true;
 
     const walletJoinReqPath = [COLLECTION_USERS, uid, "joinreq", sharedLinkID, "id"].join(PATH_SEPARATOR);
-    updates[walletJoinReqPath + "/id"] = walletId;
+    updates[walletJoinReqPath  ] = walletId;
     console.log("updates: " + JSON.stringify(updates));
     await adminDB.ref().update(updates);
 
@@ -435,60 +272,41 @@ exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/joinreq/
   });
   return snap.ref;
 });
-exports.userjoinedWallet = functions.database.ref("/wallets/{walletId}/acl/r/{uid}").onWrite(async (change, context) => {
+
+exports.userJoinedWallet = functions.database.ref("/wallets/{walletId}/acl/r/{uid}").onWrite(async (change, context) => {
   var nextVal = change.after.val();
   var authId = context.params.uid;
   var walletId = context.params.walletId;
+  var params = {
+    "nextVal": nextVal, "authId":authId, "walletId":walletId
+  }
+      console.log("updates: " + JSON.stringify(params));
+
   if (nextVal !== undefined && nextVal === true) {
     adminDB.ref(COLLECTION_JOINREQUEST).child(authId).child(walletId).remove()
     return change;
   }
 });
-// USER SELECT the player on thje wallet joined
-exports.joinwalletAsPlayer = functions.database.ref("/wallets/{walletId}/teams/{teamId}/players/{playerId}/u").onWrite(async (change, context) => {
-  if (context.authType !== undefined && context.authType === "ADMIN") {
-    return change.before;
-  }
-  const uid = context.auth.uid;
-  console.log("user:" + uid);
+
+exports.usersJoinWalletWithMemberId = functions.database.ref("/users/{uid}/g/{walletId}").onWrite(async (change, context) => {
   const walletId = context.params.walletId;
-  const teamId = context.params.teamId;
-  const playerId = context.params.playerId;
-  const changed = change.after;
-  console.log("changed:" + changed);
+  const memberId = change.after.val();
+  const authId = context.auth.uid;
 
-  // aggiorno il nome e l'avatar con quelli dell'utente che si unisce al wallet
-  if (changed !== undefined && changed !== null && changed.val() !== null) {
-    console.log("joinwalletAsPlayer - lookFor:" + changed.val());
-
-    const userSnap = await adminDB.ref(COLLECTION_USERS).child(changed.val()).once("value");
-
-    if (userSnap !== undefined || userSnap !== null) {
-      console.log("joinwalletAsPlayer - snap:" + JSON.stringify(userSnap));
-      const user = userSnap.val();
-      const updates = {
-        "name": user["displayName"],
-        "a": user["a"],
-      };
-      const path_playerOnwallet = [COLLECTION_WALLETS, walletId, VAR_TEAMS, teamId, VAR_PLAYERS, playerId].join(PATH_SEPARATOR);
-      console.log("path:" + path_playerOnwallet, "set", updates);
-      await adminDB.ref(path_playerOnwallet).update(updates);
-
-
-    }
-
-    const sharedlinkSnap = await adminDB.ref(COLLECTION_WALLETS).child(walletId).child("sl").once("value");
-    if (sharedlinkSnap !== undefined && sharedlinkSnap !== null) {
-      const sharedlinkID = sharedlinkSnap.val();
-      const path_joinReq_player = [COLLECTION_JOINREQUEST, uid, sharedlinkID].join(PATH_SEPARATOR)
-      await adminDB.ref(path_joinReq_player).remove();
-
-    }
-
+  var params = {
+    "memberId": memberId, "authId":authId, "walletId":walletId
   }
-  return change;
+  var updates = {
+    "user": authId,
+    "name":context.auth.token.name
+  }
+   console.log("check: " + JSON.stringify(params));
+
+  adminDB.ref(COLLECTION_WALLETS).child(walletId).child("quotas").child(memberId).update(updates)
+  return change.after.ref;
 });
 
+  
 /* ==== **** ===== */
 
 const fld_quantity = "q";
@@ -685,6 +503,9 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
       console.log("updateWalletQuotaLast LOOP next", key, nextM);
       // console.log("updateWalletQuotaLast LOOP", key, currM.quota, nextM.q, currM.quota + nextM.q);
       const prefix = "quotas/" + key;
+      if (currM.trxc === undefined) {
+        currM.trxc = 0;
+      }
       if (nextM !== undefined) {
 
         // if (trxType === 'item') {
@@ -748,6 +569,7 @@ function calculate(currTrx) {
   const paid = round3Dec(currTrx.a * currTrx.qt);
   var parts = 100
   if (currTrx.q.t == "parts") { 
+    parts = 0;
     for (const key in currTrx.debs) {
       parts += currTrx.debs[key];
     }

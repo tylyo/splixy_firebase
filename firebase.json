@@ -64,7 +64,8 @@
         "destination": "/support.html",
         "source": "/support"
       }
-    ]
+    ],
+    "site": "splixy"
   },
   "remoteconfig": {
     "template": "remoteconfig.template.json"

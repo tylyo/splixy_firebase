@@ -9,3 +9,7 @@ img {
   padding-top: 141px;
 }
 
+body {
+  background-image: url("../../assets/img/bg.jpg");
+}
+

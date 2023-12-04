@@ -55,10 +55,14 @@
       "**/node_modules/**"
     ],
     "public": "public",
-    "rewrite": [
+    "rewrites": [
       {
         "destination": "/privacy.html",
         "source": "/privacy"
+      },
+      {
+        "destination": "/terms.html",
+        "source": "/terms"
       },
       {
         "destination": "/support.html",

@@ -8,6 +8,10 @@ const {
   database
 } = require("firebase-admin");
 require("firebase-functions/logger/compat");
+
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
 // const {
 //   log,
 //   info,
@@ -32,6 +36,25 @@ const COLLECTION_USERSTATS = "userStats";
 // const adminFire = admin.firestore();
 
 // const names = [];
+
+exports.updateAuthUser = functions.database.ref("/users/{userId}/lastLogin").onWrite((change, context) => {
+  const u_id = context.auth?.uid;
+  const email_verified = context.auth?.token.email_verified;
+  const provider = context.auth?.token.firebase.sign_in_provider;
+
+  // functions.logger.info("context", provider);
+  if (provider !== undefined || provider == "password") {
+    functions.logger.info({
+      "email": u_id,
+      "ev:": email_verified,
+      "ref": JSON.stringify(change.after.parent)
+    });
+    
+    change.after.ref.parent.child("ev").set(email_verified);
+  }
+
+  return change.after;
+});
 exports.authUser = functions.auth.user().onCreate((userRecord, context) => {
   // console.log("authUser - userRecord:" + userRecord.toJSON());
   // })
@@ -42,21 +65,25 @@ exports.authUser = functions.auth.user().onCreate((userRecord, context) => {
   const email = userRecord.email;
   let _displayName = userRecord.displayName;
   if (_displayName === undefined || userRecord.displayName === null) {
-    _displayName = "Player";
+    _displayName = "Member";
   }
   const providerId = userRecord.providerData[0].providerId;
-  console.log("uid:%s email:%s", uid, email);
+  console.log("authUser uid:%s email:%s", uid, email);
   if (email !== undefined) {
     console.log(_displayName);
     _displayName = email.split("@")[0].replace(".", " ");
+    while (_displayName.length < 8) {
+      _displayName = _displayName + getRandomInt(9);
+    }
     userRecord.displayName = _displayName;
   }
   console.log("providerId %s, email:%s, user %s,displayName:%s",
     providerId, email, uid, _displayName);
-
+  
   adminDB.ref(COLLECTION_USERS + PATH_SEPARATOR + uid + PATH_SEPARATOR).update({
     "displayName": _displayName,
     "a": "323023232323",
+    "ev":false,
 
   });
 

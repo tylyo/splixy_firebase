@@ -74,7 +74,7 @@ exports.authUser = functions.auth.user().onCreate((userRecord, context) => {
   // console.log("authUser - userRecord:" + userRecord.toJSON());
   // })
   // exports.updateUserBounds = functions.https.onCall((data, context) => {
-  console.log("authUser -- start --", JSON.stringify(context.token));
+  console.log("authUser -- start --", JSON.stringify(context));
 
   const uid = userRecord.uid;
   const email = userRecord.email;

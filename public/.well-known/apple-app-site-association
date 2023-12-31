@@ -4,8 +4,7 @@
       {
         "appID": "FHSBQY4GC7.com.tylyodev.splixy",
         "paths": [
-          "/??",
-          "/join/?*"
+          "*"
         ]
       }
     ]

@@ -1,16 +1,16 @@
 {
   "rules": {
-    ".read": "auth.uid !== null",
-    ".write": "auth.uid !== null",
     "categories": {
       "$c_id": {
         ".write": "false"
-      }
+      },
+      ".read": "auth.uid !== null"
     },
     "credits": {
       "$c_id": {
         ".write": "false"
-      }
+      },
+      ".read": "auth.uid !== null"
     },
     "purchases": {
       "$uid": {
@@ -21,13 +21,18 @@
     "transactions": {
       "$wid": {
         "$trxId": {
-          ".indexOn":["t","date"],
+          ".indexOn": [
+            "date",
+            "updated"
+          ],
           ".read": "auth.uid !== null && root.child('wallets').child($wid).child('acl/r').child(auth.uid).val() === true",
           ".write": "auth.uid !== null && root.child('wallets').child($wid).child('acl/w').child(auth.uid).val() === true",
           "a": {
             ".validate": "newData.isNumber() && newData.val() > 0"
           }
-        }
+        },
+        ".read": "auth.uid !== null && root.child('wallets').child($wid).child('acl/r').child(auth.uid).val() === true",
+        ".write": "auth.uid !== null && root.child('wallets').child($wid).child('acl/w').child(auth.uid).val() === true"
       }
     },
     "users": {
@@ -37,9 +42,10 @@
       }
     },
     "wallets": {
-      "$walletId": {
+      "$wid": {
         ".read": "auth.uid !== null && data.child('acl/r').child(auth.uid).val() === true",
-        ".write": "auth.uid !== null && data.child('acl/w').child(auth.uid).val() === true",
+        ".validate": "auth.uid !== null",
+        ".write": "auth.uid !== null && (newData.child('acl/w').child(auth.uid).val() === true || data.child('acl/c').child(auth.uid).val() === true) ",
         "acl": {
           ".indexOn": [
             "r",
@@ -51,10 +57,11 @@
         }
       },
       ".indexOn": [
-        "sl",
         "creator",
-        "created"
-      ]
+        "created",
+        "sl"
+      ],
+      ".read": "auth.uid !== null"
     }
   }
 }

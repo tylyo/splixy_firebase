@@ -7,6 +7,7 @@ const {
   credential,
   database
 } = require("firebase-admin");
+const { user } = require("firebase-functions/v1/auth");
 require("firebase-functions/logger/compat");
 
 function getRandomInt(max) {
@@ -335,21 +336,27 @@ exports.userJoinedWallet = functions.database.ref("/wallets/{walletId}/acl/r/{ui
   }
 });
 
-exports.usersJoinWalletWithMemberId = functions.database.ref("/users/{uid}/g/{walletId}").onWrite(async (change, context) => {
-  const walletId = context.params.walletId;
-  const memberId = change.after.val();
-  const authId = context.auth.uid;
-
-  var params = {
-    "memberId": memberId, "authId": authId, "walletId": walletId
-  }
+function joinWalletUpdateWithMember(snap, walletId, memberId) {
+  const userData = snap.val();
+  console.log("check:userData " + JSON.stringify(userData));
   var updates = {
-    "user": authId,
-    "name": context.auth.token.name
+    "name": getMapVal(userData, "displayName", "UserName"),
+    "a": getMapVal(userData, "a", "010203040506"),
+    "c": getMapVal(userData, "c", "FF342134"),
   }
-  console.log("check: " + JSON.stringify(params));
+  console.log("check: updates" + JSON.stringify(updates));
 
   adminDB.ref(COLLECTION_WALLETS).child(walletId).child("quotas").child(memberId).update(updates)
+}
+
+exports.usersJoinWalletWithMemberId = functions.database.ref("/users/{uid}/g/{walletId}").onWrite(async (change, context) => {
+  const walletId = context.params.walletId;
+  const memberValues = change.after.val();
+  const authId = context.auth.uid;
+  const memberId = memberValues['mid'];
+
+  adminDB.ref(COLLECTION_USERS).child(authId).once('value', (snap, _) => joinWalletUpdateWithMember(snap, walletId,memberId))
+  
   return change.after.ref;
 });
 
@@ -988,9 +995,8 @@ function updateWalletCreditor(finalWalletQuota, currCreditor, nextCreditor) {
 }
 
 function getMapVal(map, key, def) {
-  console.log("getMapVal", key, typeof (map))
 
-  if (!map.hasOwnProperty(key) || map[key] == null || map[key]) return def;
+  if (!map.hasOwnProperty(key) || map[key] == null || map[key] === undefined) return def;
   return map[key];
 }
 

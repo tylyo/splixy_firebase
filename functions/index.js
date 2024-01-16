@@ -184,12 +184,11 @@ exports.walletCreate = functions.database.ref("/" + COLLECTION_WALLETS + "/{wall
   // return await snap.ref.update(creationUpdates);
   return snap;
 });
-exports.walletDelete = functions.database.ref("/" + COLLECTION_WALLETS + "/{walletId}").onDelete((snap, context) => {
-  // // var walletId = context.params.walletId
+exports.walletDelete = functions.database.ref("/wallets/{walletId}").onDelete((snap, context) => {
+  var walletId = context.params.walletId
   // // const log = new LogEvent(context, "wallet", walletId)
-
   console.log("val: " + JSON.stringify(snap.val()));
-
+  adminDB.ref(COLLECTION_TRANSACTIONS + PATH_SEPARATOR + walletId)
   // return await snap.ref.update(creationUpdates);
   return snap;
 });
@@ -213,7 +212,7 @@ exports.walletNameUpdate = functions.database.ref("/wallets/{walletId}/name").on
 
 function walletUpdatedRefresh(walletId) {
   const path_updated = [COLLECTION_WALLETS, walletId, "updated"].join(PATH_SEPARATOR);
-  adminDB.ref("/wallets/" + walletId + "/updated").set(currentTM());
+  adminDB.ref( COLLECTION_WALLETS + PATH_SEPARATOR + walletId + "/updated").set(currentTM());
 }
 
 

@@ -1,5 +1,11 @@
 {
   "rules": {
+    "apnToken": {
+      "$uid": {
+        ".read": "auth !== null && auth.uid === $uid",
+        ".write": "auth !== null && auth.uid === $uid"
+      }
+    },
     "categories": {
       "$c_id": {
         ".write": "false"
@@ -11,6 +17,12 @@
         ".write": "false"
       },
       ".read": "auth.uid !== null"
+    },
+    "fcmTokens": {
+      "$uid": {
+        ".read": "auth !== null && auth.uid === $uid",
+        ".write": "auth !== null && auth.uid === $uid"
+      }
     },
     "purchases": {
       "$uid": {
@@ -48,6 +60,7 @@
         ".write": "auth.uid !== null && (newData.child('acl/w').child(auth.uid).val() === true || data.child('acl/c').child(auth.uid).val() === true) ",
         "acl": {
           ".indexOn": [
+            "c",
             "r",
             "w"
           ]
@@ -57,6 +70,9 @@
         }
       },
       ".indexOn": [
+        "acl/c/OVUtwD08WlWUyeiQB4RZjJVgImy2",
+        "acl/w",
+        "acl/r",
         "creator",
         "created",
         "sl"

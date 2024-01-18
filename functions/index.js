@@ -8,6 +8,7 @@ const {
   database
 } = require("firebase-admin");
 const { user } = require("firebase-functions/v1/auth");
+const { DataSnapshot } = require("firebase-admin/database");
 require("firebase-functions/logger/compat");
 
 function getRandomInt(max) {
@@ -31,6 +32,7 @@ const COLLECTION_JOINREQUEST = "joinreq";
 const COLLECTION_USERS = "users";
 const COLLECTION_WALLETS = "wallets";
 const COLLECTION_TRANSACTIONS = "transactions";
+const COLLECTION_LOCALES = "locales";
 const COLLECTION_PURCHASES = "puchases";
 const COLLECTION_USERSTATS = "userStats";
 
@@ -342,6 +344,7 @@ function joinWalletUpdateWithMember(snap, walletId, memberId) {
     "name": getMapVal(userData, "displayName", "UserName"),
     "a": getMapVal(userData, "a", "010203040506"),
     "c": getMapVal(userData, "c", "FF342134"),
+    'user': snap.key
   }
   console.log("check: updates" + JSON.stringify(updates));
 
@@ -460,13 +463,24 @@ exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}").o
   console.log("trxUpdate", "START")
   var walletId = context.params.walletId;
   // console.log("snap: " + JSON.stringify(snap));
-  // console.log("context: " + JSON.stringify(context));
+  console.log("context: " + JSON.stringify(context));
 
   var before = snap.before.val();
   var updated = snap.after.val();
   const currTrx = trxFromSnap(before, snap.key)
   const nextTrx = trxFromSnap(updated, snap.key)
-  trxUpdateToWallet(walletId, currTrx, nextTrx)
+
+  const updatesMember = trxUpdateToWallet(walletId, currTrx, nextTrx)
+  console.log("trxUpdate", updatesMember);
+  var lastEvent = {
+    "event": "trxUpdate",
+    "trx":updated['name'],
+    "user": context.auth?.token.user_id,
+    "ts": currentTM(),
+
+  }
+  updateWalletQuotaLast(walletId, updatesMember,0, lastEvent);
+
   return snap;
 });
 
@@ -531,11 +545,60 @@ exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").o
   return snap;
 });
 
-// exports.eventQuotaUpdate = functions.database.ref("/wallet/{walletId}/quotas/{mId}")
-//   .onUpdate((snap, context) => {
+exports.walletUpdateNotification = functions.database.ref("/wallet/{walletId}/lastEvent/")
+  .onUpdate((snap, context) => {
 
-//   });
-function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
+  });
+
+async function sendNotification(to =[], lang = "en", event = "trxUpdate",) {
+  console.log(to, lang, event)
+  var promises = to.map(function (uid) {
+    return adminDB.ref("fcmTokens").child(uid).child("tkn").once('value', (snap, _) => {
+      const token = snap.val();
+      return token;
+    });
+  });
+  
+  const payload = {
+    "notification": {
+      "title": "Splixy - Modifica al gruppo " + event['group'],
+      "body":"Sono state apportate modifiche alla transazione "+event['trx'],
+    },
+  }
+  
+  Promise.all(promises).then((results) => {
+    results.forEach(
+      (snap, idx) => { 
+        if (snap.val() == null) { return; }
+        const token = snap.val();
+        admin.messaging().sendToDevice(token, payload)
+          .then((response) => {
+            // Response is a message ID string.
+            console.log('Successfully sent message:', response.failureCount);
+            if (response.failureCount == 0) {
+              return
+            }
+            const failedTokens = [];
+            response.results.forEach((resp, idx) => {
+              if (!resp.success) {
+                console.log("messaging Error", resp.error);
+              }
+            });
+
+          }).catch((error) => {
+            console.log('Error sending message:', error);
+          });
+      }
+    )
+    
+  });
+  
+  
+  
+}
+
+// IMPORTANTE : AGGIORNA IL GRUPPO con il risultato del calcolo delle transazioni
+function updateWalletQuotaLast(walletId, nextMembers, delta = 0, lastEvent = {}) {
   adminDB.ref(COLLECTION_WALLETS).child(walletId).once('value', (snap, str) => {
     const walletMap = snap.val();
     const currMembers = walletMap['quotas']
@@ -550,12 +613,14 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
     }
 
     var finalMemberUpdates = {}
+    var users = [];
+    
     for (const key in currMembers) {
       console.log("updateWalletQuotaLast LOOP", key);
       const currM = currMembers[key];
       const nextM = nextMembers[key];
       // console.log("updateWalletQuotaLast LOOP curr", key, currM);
-      console.log("updateWalletQuotaLast LOOP next", key, nextM);
+      console.log("updateWalletQuotaLast LOOP next", key, currM,"->", nextM);
       // console.log("updateWalletQuotaLast LOOP", key, currM.quota, nextM.q, currM.quota + nextM.q);
       const prefix = "quotas/" + key;
       if (currM.trxc === undefined) {
@@ -579,14 +644,22 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0) {
         finalMemberUpdates[prefix + "/trxc"] = currM.trxc;
 
       }
-
+      if (currM['user'] !== undefined) {
+        users.push(currM['user']);
+      }
     }
     if (delta != 0) {
       finalMemberUpdates["trxCount"] = trxCount + delta;
     }
 
     finalMemberUpdates["updated"] = currentTM();
-
+    if (lastEvent !== undefined) {
+      console.log("lastEvent", users);
+      finalMemberUpdates["lastEvent"] = lastEvent;
+      // users = users.filter((elem) => { return elem !== lastEvent['user'] });
+      lastEvent["group"] = walletMap.name;
+      sendNotification(users,"en",lastEvent);
+    }
     console.log("updateWalletQuotaLast FINAL", finalMemberUpdates);
     snap.ref.update(finalMemberUpdates);
     // .update(finalMemberUpdates);
@@ -621,6 +694,7 @@ function calculate(currTrx) {
   const trxId = currTrx.uid;
   const trxType = currTrx.t;
   const credKey = currTrx.cred;
+  
   const paid = round3Dec(currTrx.a * currTrx.qt);
   var parts = 100
   if (currTrx.q.t == "parts") {
@@ -718,7 +792,7 @@ function trxUpdateToWallet(walletId, currTrx, nextTrx) {
 
   }
   console.log("trxUpdateToWallet", updatesMember)
-  updateWalletQuotaLast(walletId, updatesMember);
+  return updatesMember;
 }
 
 function walletQuotasCalculate(walletId, trxList, memberKeys) {
@@ -818,14 +892,16 @@ class WalletMember {
   q = 0.0;
   m = 0.0;
   trxc = 0;
+  user = undefined;
 
-  constructor(uid, p, s, m, trxc = 0) {
+  constructor(uid, p, s, m, trxc = 0,user) {
     this.uid = uid;
     this.p = round3Dec(p);
     this.s = round3Dec(s);
     this.m = round3Dec(m);
     this.q = round3Dec(p - s + m);
     this.trxc = trxc;
+    this.user = user;
   }
   subtract() {
     this.p *= -1;
@@ -849,11 +925,12 @@ class WalletMember {
       "s": this.s,
       "m": this.m,
       "q": this.q,
-      "trxc": this.trx
+      "trxc": this.trxc,
+      "user":this.user
     };
   }
   toStr() {
-    return [this.uid, this.p, this.s, this.m, this.q];
+    return [this.uid, this.p, this.s, this.m, this.q,this.user];
   }
 }
 
@@ -1060,4 +1137,13 @@ function updateWalletQuota(walletId, finalEventUpdate) {
     .catch(err => {
       console.error(err);
     });
+  
+  exports.pruneTokens = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
+    // Get all documents where the timestamp exceeds is not within the past month
+    // adminDB.reference('fcmTokens').orderByChild("ts").
+    //   // .where("ts", "<", Date.now() - EXPIRATION_TIME)
+    //   // .get();
+    // // Delete devices with stale tokens
+    // staleTokensResult.forEach(function (doc) { doc.ref.delete(); });
+  });
 }

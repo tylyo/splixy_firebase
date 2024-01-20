@@ -24,6 +24,12 @@
         ".write": "auth !== null && auth.uid === $uid"
       }
     },
+    "logEvents": {
+      "$wid": {
+        ".read": "auth !== null",
+        ".write": "auth !== null"
+      }
+    },
     "purchases": {
       "$uid": {
         ".read": "auth !== null && auth.uid === $uid",

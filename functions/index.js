@@ -9,23 +9,12 @@ const {
 } = require("firebase-admin");
 const { user } = require("firebase-functions/v1/auth");
 const { DataSnapshot } = require("firebase-admin/database");
-require("firebase-functions/logger/compat");
+// require("firebase-functions/logger/compat");
 
-function getRandomInt(max) {
-  return Math.floor(Math.random() * max);
-}
-// const {
-//   log,
-//   info,
-//   debug,
-//   warn,
-//   error,
-//   write,
-// } = require("firebase-functions/logger");
-
-// const {DataSnapshot} = require("firebase-functions/v1/database");
-// const {instance, DataSnapshot} = require("firebase-functions/v1/database");
 admin.initializeApp(functions.config().firebase);
+
+//=========== CONSTANTS ============//
+
 const adminDB = admin.database();
 const PATH_SEPARATOR = "/";
 const COLLECTION_JOINREQUEST = "joinreq";
@@ -35,10 +24,139 @@ const COLLECTION_TRANSACTIONS = "transactions";
 const COLLECTION_LOCALES = "locales";
 const COLLECTION_PURCHASES = "puchases";
 const COLLECTION_USERSTATS = "userStats";
+const COLLECTION_LOGEVENTS = "logEvents";
 
-// const adminFire = admin.firestore();
 
-// const names = [];
+//========== CLASSES =============//
+
+class LastEvent {
+  event;
+  tid;
+  tnm;
+  u;
+  ts = currentTM();
+  extra = null;
+  constructor(event, trxId, trx, user) {
+    this.event = event;
+    this.tid = trxId;
+    this.tnm = trx;
+    this.u = user;
+    this.ts = currentTM();
+  }
+  toMap() {
+    return new Map(Object.entries(this));
+  }
+
+  storeToDB(walletId) {
+    console.group("storeToDB");
+    var ref = adminDB.ref(COLLECTION_LOGEVENTS).child(walletId);
+    const write = this.toMap();
+    const newkey = ref.push(this);
+    console.groupEnd();
+  }
+
+}
+class TrxObj {
+  uid = "";
+  n = "";
+  debs = {};
+  q = {
+    t: "parts",
+    a: 0.0
+  };
+  qt = 1.0;
+  a = 0.0;
+  cred = "";
+  t = "item";
+  constructor(uid, name, type, debs, quota, quantity, amount, creditor) {
+    this.uid = uid;
+    this.nm = name;
+    this.t = type;
+    this.debs = debs;
+    this.a = round3Dec(amount);
+    this.cred = creditor;
+    this.q = quota;
+    this.q.a = round3Dec(quota['a'])
+    this.qt = quantity;
+  }
+  getAmountQT() {
+    return round3Dec(this.qt * this.q.a);
+  }
+  
+}
+
+function trxFromSnap(map, key) {
+  try {
+    return new TrxObj(key,
+      map.name,
+      map.t,
+      map.debs,
+      { "a": map.q["a"], "t": map.q['t'] },
+      map.qt,
+      map.a,
+      map.cred
+    );
+  } catch (err) {
+    console.error(key, err)
+  }
+}
+class WalletMember {
+  /**sss */
+  uid = "";
+  p = 0.0;
+  s = 0.0;
+  q = 0.0;
+  m = 0.0;
+  trxc = 0;
+  user = undefined;
+
+  constructor(uid, p, s, m, trxc = 0, user) {
+    this.uid = uid;
+    this.p = round3Dec(p);
+    this.s = round3Dec(s);
+    this.m = round3Dec(m);
+    this.q = round3Dec(p - s + m);
+    this.trxc = trxc;
+    this.user = user;
+  }
+  subtract() {
+    this.p *= -1;
+    this.s *= -1;
+    this.m *= -1;
+    this.q *= -1;
+    return this;
+  }
+  add(member, trxId) {
+    // console.log("add", member);
+    this.p += round3Dec(member.p);
+    this.s += round3Dec(member.s);
+    this.m += round3Dec(member.m);
+    this.q = round3Dec(this.p - this.s + this.m);
+    this.trxc += 1;
+    // console.log("add end ", this);
+  }
+  toMap() {
+    return {
+      "p": this.p,
+      "s": this.s,
+      "m": this.m,
+      "q": this.q,
+      "trxc": this.trxc,
+      "user": this.user
+    };
+  }
+  toStr() {
+    return [this.uid, this.p, this.s, this.m, this.q, this.user];
+  }
+}
+
+
+
+
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+
 
 exports.updateAuthUser = functions.database.ref("/users/{userId}/lastLogin").onWrite((change, context) => {
   const u_id = context.auth?.uid;
@@ -195,6 +313,11 @@ exports.walletDelete = functions.database.ref("/wallets/{walletId}").onDelete((s
   return snap;
 });
 
+// exports.cleanTitle = functions.database.ref("/wallets/{walletId}/name}").onWrite((change, context) => {
+//   console.log("cleanTitle -- start --");
+//   change.after;
+//   return change.after.ref;
+// });
 exports.walletNameUpdate = functions.database.ref("/wallets/{walletId}/name").onUpdate((change, context) => {
   console.log("walletNameUpdate start");
   const walletId = context.params.walletId;
@@ -252,17 +375,13 @@ exports.askToJoinWallet = functions.database.ref("/users/{uid}/wallets/{walletId
   });
 
 
-exports.cleanTitle = functions.database.ref("/wallets/{walletId}/name}").onWrite((change, context) => {
-  console.log("cleanTitle -- start --");
-  change.after;
-  return change.after.ref;
-});
 
-exports.cleanMemberForGroup = functions.database.ref("/wallets/{walletId}/quotas}").onWrite((change, context) => {
-  console.log("cleanTitle -- start --");
-  change.after;
-  return change.after.ref;
-});
+
+// exports.cleanMemberForGroup = functions.database.ref("/wallets/{walletId}/quotas}").onWrite((change, context) => {
+//   console.log("cleanTitle -- start --");
+//   change.after;
+//   return change.after.ref;
+// });
 
 
 /**
@@ -378,20 +497,7 @@ const fld_debitors = "debs";
 const fld_creditor = "cred";
 const fld_members = "quotas";
 
-function trxFromSnap(map, key) {
-  try {
-    return new TrxObj(key,
-      map.t,
-      map.debs,
-      { "a": map.q["a"], "t": map.q['t'] },
-      map.qt,
-      map.a,
-      map.cred
-    );
-  } catch (err) {
-    console.error(key, err)
-  }
-}
+
 
 exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuota/").onWrite((change, context) => {
   // const uid = context.auth.uid;
@@ -458,12 +564,16 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
   return change.after.ref;
 });
 
+
+
 exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}").onUpdate((snap, context) => {
 
   console.log("trxUpdate", "START")
-  var walletId = context.params.walletId;
+  const walletId = context.params.walletId;
+  const trx_id = context.params.trxId;
+  const user_id = context.auth?.token.user_id;
   // console.log("snap: " + JSON.stringify(snap));
-  console.log("context: " + JSON.stringify(context));
+  // console.log("context: " + JSON.stringify(context));
 
   var before = snap.before.val();
   var updated = snap.after.val();
@@ -471,87 +581,72 @@ exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}").o
   const nextTrx = trxFromSnap(updated, snap.key)
 
   const updatesMember = trxUpdateToWallet(walletId, currTrx, nextTrx)
-  console.log("trxUpdate", updatesMember);
-  var lastEvent = {
-    "event": "trxUpdate",
-    "trx":updated['name'],
-    "user": context.auth?.token.user_id,
-    "ts": currentTM(),
-
-  }
-  updateWalletQuotaLast(walletId, updatesMember,0, lastEvent);
-
+  var lastEvent = new LastEvent("trxUpd", trx_id, updated['name'], user_id);
+  
+  updateWalletQuotaLast(walletId, updatesMember, 0, lastEvent);
+  
   return snap;
 });
 
 exports.trxDelete = functions.database.ref("/transactions/{walletId}/{trxId}").onDelete((snap, context) => {
-  console.log(JSON.stringify(snap.val()));
+  
   const _walletId = context.params.walletId;
-  const trx = trxFromSnap(snap.val());
+  const trx_id = context.params.trxId;
+  const user_id = context.auth?.token.user_id;
 
+  const trx = trxFromSnap(snap.val());
   const updates = calculate(trx).walletUPD;
   var finalupdates = {};
   for (const key in updates) {
     const member = updates[key].subtract();
     finalupdates[key] = member;
   }
-  console.log(finalupdates);
-
-  updateWalletQuotaLast(_walletId, finalupdates, -1);
+  // console.log(finalupdates);
+  var lastEvent = new LastEvent("trxDel", trx_id, trx.nm, user_id);
+  lastEvent.extra = snap.val();
+  updateWalletQuotaLast(_walletId, finalupdates, -1,lastEvent);
   return snap;
 })
 
 
 exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").onCreate((snap, context) => {
   const _walletId = context.params.walletId;
-  const _trxId = context.params.trxId;
+  const trx_id = context.params.trxId;
+  const user_id = context.auth?.token.user_id;
   var newKey = snap.key;
   var newVal = snap.val();
 
+  const newTrx = trxFromSnap(newVal, newKey)
+  const res = calculate(newTrx);
 
-  var updates = {}
-  if (newVal.qt === undefined || newVal.qt === 0) {
-    updates["qt"] = 1.0;
-    // snap.ref.child(["qt"]).set(1.0);
-  }
-  if (newVal.a === undefined) {
-    updates["a"] = 0.0;
-    // sna.ref.child(fld_amount).set(0.0);
-  }
-  if (newVal.t === undefined) {
-    updates[[fld_type]] = "item";
-    // snap.ref.child("f").set("item");
-  }
-  const nextTrx = trxFromSnap(newVal, newKey)
-  console.log("created newVal: ", JSON.stringify({
-    [_walletId]: {
-      [_trxId]: newVal
-    }
-  }));
-  console.log("created: nextTrx", JSON.stringify({
-    [_walletId]: {
-      [_trxId]: nextTrx
-    }
-  }));
+  var lastEvent = new LastEvent("trxAdd", trx_id, newTrx.nm, user_id);
 
-  const res = calculate(nextTrx);
-
-  console.log("res", res)
-  console.log("updates", updates)
-
-  updateWalletQuotaLast(_walletId, res.walletUPD, 1)
+  updateWalletQuotaLast(_walletId, res.walletUPD, 1,lastEvent)
 
 
   return snap;
 });
 
-exports.walletUpdateNotification = functions.database.ref("/wallet/{walletId}/lastEvent/")
-  .onUpdate((snap, context) => {
+exports.walletUpdateNotification = functions.database.ref("/lastEvents/{walletId}/{eventId}")
+  .onCreate((snap, context) => {
+    const walletId = context.params.walletId;
+    console.log("walletUpdateNotification START", walletId);
+    const user_id = context.auth?.token.user_id;
+    var newVal = snap.val();
 
+    adminDB.ref(COLLECTION_WALLETS).child(walletId).once('value', (snap) => { 
+      const group = snap.val();
+      const g_name = group.name;
+      const g_members = group.quotas;
+      const t_name = newVal.name;
+      console.log({g_name})
+      console.log({g_members})
+    });
   });
 
-async function sendNotification(to =[], lang = "en", event = "trxUpdate",) {
+async function sendNotification(to = [], lang = "en", event) {
   console.log(to, lang, event)
+  if (to.length == 0 || event === undefined || event == null ) return;
   var promises = to.map(function (uid) {
     return adminDB.ref("fcmTokens").child(uid).child("tkn").once('value', (snap, _) => {
       const token = snap.val();
@@ -561,9 +656,14 @@ async function sendNotification(to =[], lang = "en", event = "trxUpdate",) {
   
   const payload = {
     "notification": {
-      "title": "Splixy - Modifica al gruppo " + event['group'],
-      "body":"Sono state apportate modifiche alla transazione "+event['trx'],
+      "title": "Splixy - Modifica al gruppo " + event['gnm'],
+      "body": "Sono state apportate modifiche alla transazione " + event['tnm'],
+      
     },
+    "data": {
+      "gid" : event['gid'],
+      "tid" : event['tid'],
+    }
   }
   
   Promise.all(promises).then((results) => {
@@ -571,10 +671,11 @@ async function sendNotification(to =[], lang = "en", event = "trxUpdate",) {
       (snap, idx) => { 
         if (snap.val() == null) { return; }
         const token = snap.val();
+        console.log("messaging: sending" , idx , "for",event['gnm']);
         admin.messaging().sendToDevice(token, payload)
           .then((response) => {
             // Response is a message ID string.
-            console.log('Successfully sent message:', response.failureCount);
+            console.log('messaging sent:',response.successCount, response.failureCount);
             if (response.failureCount == 0) {
               return
             }
@@ -600,6 +701,7 @@ async function sendNotification(to =[], lang = "en", event = "trxUpdate",) {
 // IMPORTANTE : AGGIORNA IL GRUPPO con il risultato del calcolo delle transazioni
 function updateWalletQuotaLast(walletId, nextMembers, delta = 0, lastEvent = {}) {
   adminDB.ref(COLLECTION_WALLETS).child(walletId).once('value', (snap, str) => {
+    console.group("updateWalletQuotaLast", walletId);
     const walletMap = snap.val();
     const currMembers = walletMap['quotas']
 
@@ -654,13 +756,19 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0, lastEvent = {})
 
     finalMemberUpdates["updated"] = currentTM();
     if (lastEvent !== undefined) {
-      console.log("lastEvent", users);
-      finalMemberUpdates["lastEvent"] = lastEvent;
-      // users = users.filter((elem) => { return elem !== lastEvent['user'] });
-      lastEvent["group"] = walletMap.name;
+      // console.log("lastEvent", users);
+      // finalMemberUpdates["lastEvent"] = lastEvent;
+      users = users.filter((elem) => { return elem !== lastEvent['user'] });
+      // console.debug({lastEvent})
+      // if (lastEvent instanceof LastEvent) {
+      //   lastEvent.storeToDB(snap.key);
+      // }
+      lastEvent['gnm'] = walletMap['name'];
+      lastEvent['gid'] = snap.key;
       sendNotification(users,"en",lastEvent);
     }
-    console.log("updateWalletQuotaLast FINAL", finalMemberUpdates);
+    // console.log({ finalMemberUpdates });
+    console.groupEnd();
     snap.ref.update(finalMemberUpdates);
     // .update(finalMemberUpdates);
   })
@@ -761,18 +869,19 @@ function calculate(currTrx) {
 }
 
 function trxUpdateToWallet(walletId, currTrx, nextTrx) {
+  console.group("trxUpdateToWallet");
   const currCalc = calculate(currTrx).walletUPD;
   const nextCalc = calculate(nextTrx).walletUPD;
-  console.log("trxUpdateToWallet START calc curr", currCalc,);
-  console.log("trxUpdateToWallet START calc next", nextCalc);
+  console.debug("trxUpdateToWallet START calc curr", currCalc,);
+  console.debug("trxUpdateToWallet START calc next", nextCalc);
 
   var currDebitors = currTrx.debs;
   var nextDebitors = nextTrx.debs;
   nextDebitors = trxDebsRemove(currDebitors, nextDebitors);
   var updatesMember = {};
   for (const key in nextDebitors) {
-    console.log("curr", key, JSON.stringify(currCalc[key]));
-    console.log("next", key, JSON.stringify(nextCalc[key]));
+    console.debug("curr", key, JSON.stringify(currCalc[key]));
+    console.debug("next", key, JSON.stringify(nextCalc[key]));
     if (currCalc[key] === undefined) {
       currCalc[key] = new WalletMember(0, 0, 0, 0, 0);
     }
@@ -780,18 +889,18 @@ function trxUpdateToWallet(walletId, currTrx, nextTrx) {
       nextCalc[key] = new WalletMember(0, 0, 0, 0, 0);
     }
     const currS = currCalc[key].hasOwnProperty('s') ? currCalc[key].s : 0;
-    const currTrxC = currCalc[key].hasOwnProperty('trxc') ? currCalc[key].trxc : 1;
 
     const paid = nextCalc[key].p - currCalc[key].p;
     const debt = nextCalc[key].s - currS;
     const move = nextCalc[key].m - currCalc[key].m;
     const trxC = nextCalc[key].trxc - currCalc[key].trxc;
-    console.log("updateWalletQuotaLast LOOP", key, currS, nextCalc[key].s, currS - nextCalc[key].s, trxC);
+    console.debug("trxUpdateToWallet LOOP", key, currS, nextCalc[key].s, currS - nextCalc[key].s, trxC);
     updatesMember[key] = new WalletMember(key, paid, debt, move, trxC);
 
 
   }
-  console.log("trxUpdateToWallet", updatesMember)
+  console.debug({updatesMember})
+  console.groupEnd();
   return updatesMember;
 }
 
@@ -884,83 +993,9 @@ function getWalletQuotaUpdate(currTrx, nextTrx) {
   return finalEventUpdate
 
 }
-class WalletMember {
-  /**sss */
-  uid = "";
-  p = 0.0;
-  s = 0.0;
-  q = 0.0;
-  m = 0.0;
-  trxc = 0;
-  user = undefined;
-
-  constructor(uid, p, s, m, trxc = 0,user) {
-    this.uid = uid;
-    this.p = round3Dec(p);
-    this.s = round3Dec(s);
-    this.m = round3Dec(m);
-    this.q = round3Dec(p - s + m);
-    this.trxc = trxc;
-    this.user = user;
-  }
-  subtract() {
-    this.p *= -1;
-    this.s *= -1;
-    this.m *= -1;
-    this.q *= -1;
-    return this;
-  }
-  add(member, trxId) {
-    // console.log("add", member);
-    this.p += round3Dec(member.p);
-    this.s += round3Dec(member.s);
-    this.m += round3Dec(member.m);
-    this.q = round3Dec(this.p - this.s + this.m);
-    this.trxc += 1;
-    // console.log("add end ", this);
-  }
-  toMap() {
-    return {
-      "p": this.p,
-      "s": this.s,
-      "m": this.m,
-      "q": this.q,
-      "trxc": this.trxc,
-      "user":this.user
-    };
-  }
-  toStr() {
-    return [this.uid, this.p, this.s, this.m, this.q,this.user];
-  }
-}
 
 
-class TrxObj {
-  uid = "";
-  debs = {};
-  q = {
-    t: "parts",
-    a: 0.0
-  };
-  qt = 1.0;
-  a = 0.0;
-  cred = "";
-  t = "item";
-  constructor(uid, type, debs, quota, quantity, amount, creditor) {
-    this.uid = uid;
-    this.t = type;
-    this.debs = debs;
-    this.a = round3Dec(amount);
-    this.cred = creditor;
-    this.q = quota;
-    this.q.a = round3Dec(quota['a'])
-    this.qt = quantity;
-  }
-  getAmountQT() {
-    return round3Dec(this.qt * this.q.a);
-  }
 
-}
 
 /** aggiorna i debs destinazione rimuovendo dal vecchiio queeli non più presenti */
 function trxDebsRemove(currDebitors, nextDebitors) {
@@ -1146,4 +1181,5 @@ function updateWalletQuota(walletId, finalEventUpdate) {
     // // Delete devices with stale tokens
     // staleTokensResult.forEach(function (doc) { doc.ref.delete(); });
   });
-}
+
+  }

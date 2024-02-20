@@ -82,7 +82,7 @@ class TrxObj {
   getAmountQT() {
     return round3Dec(this.qt * this.q.a);
   }
-  
+
 }
 
 function trxFromSnap(map, key) {
@@ -141,9 +141,19 @@ class WalletMember {
       "s": this.s,
       "m": this.m,
       "q": this.q,
-      "trxc": this.trxc,
-      "user": this.user
+      "trxc": this.trxc
     };
+    //  var ret = {
+    //          "p": this.p,
+    //          "s": this.s,
+    //          "m": this.m,
+    //          "q": this.q,
+    //          "trxc": this.trxc
+    //        };
+    //    if ( this.user === undefined ){
+    //        delete this.user;
+    //    }
+    //    return ret;
   }
   toStr() {
     return [this.uid, this.p, this.s, this.m, this.q, this.user];
@@ -286,6 +296,7 @@ function buildwalletOnCreate(context) {
   return updates;
 }
 exports.walletCreate = functions.database.ref("/" + COLLECTION_WALLETS + "/{walletId}").onCreate((snap, context) => {
+
   // // var walletId = context.params.walletId
   // // const log = new LogEvent(context, "wallet", walletId)
   const creationUpdates = buildCreationParams(context);
@@ -337,7 +348,7 @@ exports.walletNameUpdate = functions.database.ref("/wallets/{walletId}/name").on
 
 function walletUpdatedRefresh(walletId) {
   const path_updated = [COLLECTION_WALLETS, walletId, "updated"].join(PATH_SEPARATOR);
-  adminDB.ref( COLLECTION_WALLETS + PATH_SEPARATOR + walletId + "/updated").set(currentTM());
+  adminDB.ref(COLLECTION_WALLETS + PATH_SEPARATOR + walletId + "/updated").set(currentTM());
 }
 
 
@@ -470,17 +481,54 @@ function joinWalletUpdateWithMember(snap, walletId, memberId) {
   adminDB.ref(COLLECTION_WALLETS).child(walletId).child("quotas").child(memberId).update(updates)
 }
 
-exports.usersJoinWalletWithMemberId = functions.database.ref("/users/{uid}/g/{walletId}").onWrite(async (change, context) => {
+exports.usersGroupUpdate = functions.database.ref("/users/{uid}/g/{walletId}").onWrite(async (change, context) => {
   const walletId = context.params.walletId;
-  const memberValues = change.after.val();
   const authId = context.auth.uid;
-  const memberId = memberValues['mid'];
+  const memberValues = change.after.val();
 
-  adminDB.ref(COLLECTION_USERS).child(authId).once('value', (snap, _) => joinWalletUpdateWithMember(snap, walletId,memberId))
-  
+  //LEAVE
+  if (memberValues == null || memberValues === undefined) {
+    const data = change.before.val();
+    const mid = data['mid'];
+    
+    var updates = {}
+    updates["acl/r/" + authId] = false;
+    updates["acl/w/" + authId] = false;
+    updates[fld_members + PATH_SEPARATOR + mid + PATH_SEPARATOR + authId] = null;
+    console.log(JSON.stringify(updates));
+    var ref = adminDB.ref(COLLECTION_WALLETS).child(walletId);
+    console.log(JSON.stringify(ref));
+    ref.update(updates);
+
+  } else { // JOIN
+    const memberId = memberValues['mid'];
+    adminDB.ref(COLLECTION_USERS).child(authId).once('value', (snap, _) => joinWalletUpdateWithMember(snap, walletId, memberId))
+
+  }
+
   return change.after.ref;
 });
 
+// exports.usersLeaveWallet = functions.database.ref("/users/{uid}/g").onDelete(async (snap, context) => {
+//   const authId = context.auth.uid;
+//   const walletId = context.params.walletId;
+//   console.log(JSON.stringify(snap));
+//   const data = snap.val();
+//   functions.logger.info(data);
+//  console.log(JSON.stringify(data));
+//   const mid = data['mid'];
+  
+//   var updates = {}
+//   updates["act/r/" + authId] = false;
+//   updates["act/w/" + authId] = false;
+//   updates[fld_members + PATH_SEPARATOR + mid + PATH_SEPARATOR + user] = null;
+//   console.log(JSON.stringify(updates));
+//   functions.logger.info(updates);
+
+//   // adminDB.ref(COLLECTION_WALLETS).child(walletId).update(updates)
+
+//   return change.after.ref;
+// });
 
 /* ==== **** ===== */
 
@@ -518,6 +566,7 @@ exports.walletUpdateQuotas = functions.database.ref("/wallets/{walletId}/updQuot
     for (const k in value.val()) {
       members[k] = new WalletMember(k, 0, 0, 0);
       if (!memberKeys.includes(k)) {
+
         memberKeys.push(k);
       }
     }
@@ -582,14 +631,14 @@ exports.trxUpdate = functions.database.ref("/transactions/{walletId}/{trxId}").o
 
   const updatesMember = trxUpdateToWallet(walletId, currTrx, nextTrx)
   var lastEvent = new LastEvent("trxUpd", trx_id, updated['name'], user_id);
-  
+
   updateWalletQuotaLast(walletId, updatesMember, 0, lastEvent);
-  
+
   return snap;
 });
 
 exports.trxDelete = functions.database.ref("/transactions/{walletId}/{trxId}").onDelete((snap, context) => {
-  
+
   const _walletId = context.params.walletId;
   const trx_id = context.params.trxId;
   const user_id = context.auth?.token.user_id;
@@ -604,7 +653,7 @@ exports.trxDelete = functions.database.ref("/transactions/{walletId}/{trxId}").o
   // console.log(finalupdates);
   var lastEvent = new LastEvent("trxDel", trx_id, trx.nm, user_id);
   lastEvent.extra = snap.val();
-  updateWalletQuotaLast(_walletId, finalupdates, -1,lastEvent);
+  updateWalletQuotaLast(_walletId, finalupdates, -1, lastEvent);
   return snap;
 })
 
@@ -621,7 +670,7 @@ exports.trxCreate = functions.database.ref("/transactions/{walletId}/{trxId}").o
 
   var lastEvent = new LastEvent("trxAdd", trx_id, newTrx.nm, user_id);
 
-  updateWalletQuotaLast(_walletId, res.walletUPD, 1,lastEvent)
+  updateWalletQuotaLast(_walletId, res.walletUPD, 1, lastEvent)
 
 
   return snap;
@@ -634,48 +683,48 @@ exports.walletUpdateNotification = functions.database.ref("/lastEvents/{walletId
     const user_id = context.auth?.token.user_id;
     var newVal = snap.val();
 
-    adminDB.ref(COLLECTION_WALLETS).child(walletId).once('value', (snap) => { 
+    adminDB.ref(COLLECTION_WALLETS).child(walletId).once('value', (snap) => {
       const group = snap.val();
       const g_name = group.name;
       const g_members = group.quotas;
       const t_name = newVal.name;
-      console.log({g_name})
-      console.log({g_members})
+      console.log({ g_name })
+      console.log({ g_members })
     });
   });
 
 async function sendNotification(to = [], lang = "en", event) {
   console.log(to, lang, event)
-  if (to.length == 0 || event === undefined || event == null ) return;
+  if (to.length == 0 || event === undefined || event == null) return;
   var promises = to.map(function (uid) {
     return adminDB.ref("fcmTokens").child(uid).child("tkn").once('value', (snap, _) => {
       const token = snap.val();
       return token;
     });
   });
-  
+
   const payload = {
     "notification": {
       "title": "Splixy - Modifica al gruppo " + event['gnm'],
       "body": "Sono state apportate modifiche alla transazione " + event['tnm'],
-      
+
     },
     "data": {
-      "gid" : event['gid'],
-      "tid" : event['tid'],
+      "gid": event['gid'],
+      "tid": event['tid'],
     }
   }
-  
+
   Promise.all(promises).then((results) => {
     results.forEach(
-      (snap, idx) => { 
+      (snap, idx) => {
         if (snap.val() == null) { return; }
         const token = snap.val();
-        console.log("messaging: sending" , idx , "for",event['gnm']);
+        console.log("messaging: sending", idx, "for", event['gnm']);
         admin.messaging().sendToDevice(token, payload)
           .then((response) => {
             // Response is a message ID string.
-            console.log('messaging sent:',response.successCount, response.failureCount);
+            console.log('messaging sent:', response.successCount, response.failureCount);
             if (response.failureCount == 0) {
               return
             }
@@ -691,11 +740,11 @@ async function sendNotification(to = [], lang = "en", event) {
           });
       }
     )
-    
+
   });
-  
-  
-  
+
+
+
 }
 
 // IMPORTANTE : AGGIORNA IL GRUPPO con il risultato del calcolo delle transazioni
@@ -716,13 +765,13 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0, lastEvent = {})
 
     var finalMemberUpdates = {}
     var users = [];
-    
+
     for (const key in currMembers) {
       console.log("updateWalletQuotaLast LOOP", key);
       const currM = currMembers[key];
       const nextM = nextMembers[key];
       // console.log("updateWalletQuotaLast LOOP curr", key, currM);
-      console.log("updateWalletQuotaLast LOOP next", key, currM,"->", nextM);
+      console.log("updateWalletQuotaLast LOOP next", key, currM, "->", nextM);
       // console.log("updateWalletQuotaLast LOOP", key, currM.quota, nextM.q, currM.quota + nextM.q);
       const prefix = "quotas/" + key;
       if (currM.trxc === undefined) {
@@ -765,7 +814,7 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0, lastEvent = {})
       // }
       lastEvent['gnm'] = walletMap['name'];
       lastEvent['gid'] = snap.key;
-      sendNotification(users,"en",lastEvent);
+      sendNotification(users, "en", lastEvent);
     }
     // console.log({ finalMemberUpdates });
     console.groupEnd();
@@ -802,7 +851,7 @@ function calculate(currTrx) {
   const trxId = currTrx.uid;
   const trxType = currTrx.t;
   const credKey = currTrx.cred;
-  
+
   const paid = round3Dec(currTrx.a * currTrx.qt);
   var parts = 100
   if (currTrx.q.t == "parts") {
@@ -899,7 +948,7 @@ function trxUpdateToWallet(walletId, currTrx, nextTrx) {
 
 
   }
-  console.debug({updatesMember})
+  console.debug({ updatesMember })
   console.groupEnd();
   return updatesMember;
 }
@@ -933,253 +982,245 @@ function walletQuotasCalculate(walletId, trxList, memberKeys) {
       const move = prevCalc.m + nextCalc[key].m;
       const trxc = prevCalc.trxc + 1;
 
-      updatesMember[key] = new WalletMember(key, paid, debt, move, trxc);
+      var member = new WalletMember(key, paid, debt, move, trxc);
+      updatesMember[key] = member.toMap();
+      }
 
-      // if (key === "0xDwg3qHwj") {
-      //   console.log("walletQuotasCalculate LOOP", cc, "fine", key, updatesMember[key])
-      // }
     }
-    // console.log("===========================");
-    // for (const k in updatesMember) {
-    //   console.log("walletQuotasCalculate END", updatesMember)
-
-    // }
-
+    return updatesMember;
   }
-  return updatesMember;
-}
-///==============================================
-function getWalletQuotaUpdate(currTrx, nextTrx) {
+  ///==============================================
+  function getWalletQuotaUpdate(currTrx, nextTrx) {
 
-  const finalEventUpdate = {};
-  console.log("getWalletQuotaUpdate start");
-  console.log({
-    "curr": currTrx,
-    "next": nextTrx
-  });
-
-  for (const key in nextTrx.debs) {
-    console.log(key, {
-      [key]: nextTrx.debs
-    });
-
-    const walletMember = new WalletMember(key, 0, 0, 0);
-
-    console.log("getWalletQuotaUpdate: values", {
-      [key]: walletMember
-    });
-    if (!nextTrx.debs.hasOwnProperty(key)) {
-      continue;
-    }
-    console.log(nextTrx.debs[[key]], nextTrx.q)
-    const nextQuotaDebit = nextTrx.debs[[key]] * nextTrx.q.a;
-    const currQuotaDebit = getMapVal(currTrx.debs, [key], 0.0) * currTrx.q.a;
+    const finalEventUpdate = {};
+    console.log("getWalletQuotaUpdate start");
     console.log({
-      "nextQuotaDebit": nextQuotaDebit,
-      "currQuotaDebit": currQuotaDebit
+      "curr": currTrx,
+      "next": nextTrx
     });
 
-    // OK
-    console.log("getWalletQuotaUpdate:", key, ":", currTrx.debs[[key]], " > ", nextTrx.debs[[key]] +
-      " from:", currQuotaDebit, " > ", nextQuotaDebit,
-      " =", (nextQuotaDebit - currQuotaDebit)
-    );
+    for (const key in nextTrx.debs) {
+      console.log(key, {
+        [key]: nextTrx.debs
+      });
 
-    walletMember.q = round3Dec(nextQuotaDebit - currQuotaDebit);
+      const walletMember = new WalletMember(key, 0, 0, 0);
 
-
-    finalEventUpdate[key] = walletMember;
-  }
-  return finalEventUpdate
-
-}
-
-
-
-
-/** aggiorna i debs destinazione rimuovendo dal vecchiio queeli non più presenti */
-function trxDebsRemove(currDebitors, nextDebitors) {
-  const oldKeys = Object.keys(currDebitors)
-  const updKeys = Object.keys(nextDebitors)
-
-  console.log("trxDebsRemove", JSON.stringify(oldKeys), JSON.stringify(updKeys),)
-  const filteredKeys = oldKeys.filter(x => !updKeys.includes(x))
-  if (filteredKeys.length > 0) {
-    for (var ko in oldKeys) {
-      console.log(oldKeys[ko], "-> 0")
-      nextDebitors[oldKeys[ko]] = 0.0
-    }
-
-  }
-  console.log("updDebitors:" + JSON.stringify(nextDebitors))
-
-  return nextDebitors
-}
-
-function trxUpdateQuota(currTrx, nextTrx) {
-  console.log("trxUpdateQuota", "START")
-
-  const currQuotaAmount = currTrx.q.a;
-  var totalParts = 0.0
-  for (var k1 in nextTrx.debs) {
-    if (nextTrx.debs.hasOwnProperty(k1)) {
-      totalParts += nextTrx.debs[k1]
-    }
-  }
-  // const currQuota = before["q"];
-  // const nextQuota = updated["q"];
-  // aggiorno la quota base
-  const nextQuotaAmount = nextTrx.a / totalParts
-
-  if (nextQuotaAmount === currQuotaAmount) {
-    return currQuotaAmount;
-  }
-
-  console.log("before:", JSON.stringify(currTrx.debs))
-  console.log("updated:", JSON.stringify(nextTrx.debs))
-  console.log("oldQuota:", currTrx.qt, " * ", currTrx.q.a)
-  return nextQuotaAmount;
-}
-
-
-
-function updateTrxValues2Delete(currTrx, nextTrx) {
-  console.log("updateWalletQuota", "START")
-
-
-  nextTrx.debs = trxDebsRemove(currTrx.debs, nextTrx.debs);
-  console.log({
-    "currDebitors": nextTrx.debs
-  })
-  console.log({
-    "nextDebitors": currTrx.debs
-  })
-
-
-  // nextTrx.q.a = trxUpdateQuota(nextTrx.debs, currTrx.q, nextTrx.q);
-  nextTrx.q.a = trxUpdateQuota(currTrx, nextTrx);
-  const path = fld_quota + "/" + fld_amount;
-  console.log({
-    "path": path,
-    "amount ": nextTrx.q.a
-  });
-  // snap.after.ref.child(path).set(nextTrx.q.a); // TOFIX: posso farlo in altro punto? // TOFIX
-
-  console.log({
-    "quota": {
-      "from": currTrx.getAmountQT(),
-      "to": nextTrx.getAmountQT()
-    }
-  });
-
-
-  var finalEventUpdate = getWalletQuotaUpdate(currTrx, nextTrx);
-
-  console.log({
-    "finalEventUpdate": finalEventUpdate
-  });
-
-  finalEventUpdate = updateWalletCreditor(finalEventUpdate, currTrx.cred, nextTrx.cred);
-  console.log({
-    "finalEventUpdate": finalEventUpdate
-  });
-
-  updateWalletQuota(walletId, finalEventUpdate)
-}
-
-function updateWalletCreditor(finalWalletQuota, currCreditor, nextCreditor) {
-  if (nextCreditor === currCreditor) {
-    return;
-  }
-  console.log("update paid nextCreditor: (" + nextCreditor + ") " + JSON.stringify(finalWalletQuota[nextCreditor]))
-  if (finalWalletQuota[nextCreditor] === undefined) {
-    finalWalletQuota[nextCreditor] = {}
-  }
-  finalWalletQuota[nextCreditor]["p"] = updated["a"]
-  console.log("update paid currCreditor: (" + currCreditor + ") " + JSON.stringify(finalWalletQuota[currCreditor]))
-  if (finalWalletQuota[currCreditor] === undefined) {
-    finalWalletQuota[currCreditor] = {}
-  }
-  finalWalletQuota[currCreditor]["p"] = 0.0 - before["a"]
-
-  return finalWalletQuota
-}
-
-function getMapVal(map, key, def) {
-
-  if (!map.hasOwnProperty(key) || map[key] == null || map[key] === undefined) return def;
-  return map[key];
-}
-
-function updateWalletQuota(walletId, finalEventUpdate) {
-  console.log("updateWalletQuota", "START")
-  const ref = adminDB.ref(COLLECTION_WALLETS).child(walletId)
-
-  ref.child(fld_members).once("value")
-    .then(snap => {
-      if (snap.val() === undefined || snap.val() === null) {
-        console.error("transaction not found")
-        // var p = new Promise();
-        // p.reject(walletId + " - " + " transaction not found"); 
-        return;
+      console.log("getWalletQuotaUpdate: values", {
+        [key]: walletMember
+      });
+      if (!nextTrx.debs.hasOwnProperty(key)) {
+        continue;
       }
-      console.log("updateWalletQuota", "START 4 REAL");
-      const quotaMap = snap.val();
-      var toUpdate = {}
-      for (var curr in finalEventUpdate) {
-        if (
-          !quotaMap.hasOwnProperty(curr) ||
-          !finalEventUpdate.hasOwnProperty(curr)
-        ) {
-          continue;
-        }
-        const LOG_PREFIX = "updateWalletQuota: (" + curr + ") "
-        var quotaKey = fld_members + "/" + curr
-        const walletMemberCurrent = quotaMap[curr];
-        const walletMemberUpdate = finalEventUpdate[curr];
-        console.log(LOG_PREFIX, {
-          curr: finalEventUpdate[curr]
-        });
+      console.log(nextTrx.debs[[key]], nextTrx.q)
+      const nextQuotaDebit = nextTrx.debs[[key]] * nextTrx.q.a;
+      const currQuotaDebit = getMapVal(currTrx.debs, [key], 0.0) * currTrx.q.a;
+      console.log({
+        "nextQuotaDebit": nextQuotaDebit,
+        "currQuotaDebit": currQuotaDebit
+      });
+
+      // OK
+      console.log("getWalletQuotaUpdate:", key, ":", currTrx.debs[[key]], " > ", nextTrx.debs[[key]] +
+        " from:", currQuotaDebit, " > ", nextQuotaDebit,
+        " =", (nextQuotaDebit - currQuotaDebit)
+      );
+
+      walletMember.q = round3Dec(nextQuotaDebit - currQuotaDebit);
 
 
-        const currSpent = getMapVal(walletMemberCurrent, "s", 0.0)
-        const oldPaid = getMapVal(walletMemberCurrent, "p", 0.0)
-        const oldQuota = getMapVal(walletMemberCurrent, "q", 0.0)
+      finalEventUpdate[key] = walletMember;
+    }
+    return finalEventUpdate
 
-        const updSpent = getMapVal(walletMemberUpdate, "s", 0.0)
-        const updPaid = getMapVal(walletMemberUpdate, "p", 0.0)
-        const updQuota = getMapVal(walletMemberUpdate, "q", 0.0)
+  }
 
-        console.log(LOG_PREFIX + "quotaMap " + JSON.stringify(walletMemberCurrent))
-        console.log(LOG_PREFIX + "spent " + updSpent)
-        toUpdate[quotaKey + "/s"] = currSpent + updSpent
 
-        console.log(LOG_PREFIX + "paid " + updPaid)
-        toUpdate[quotaKey + "/p"] = oldPaid + updPaid
 
-        console.log(LOG_PREFIX + "quota:  " + oldQuota + " -> " + updPaid + " | " + updSpent)
-        toUpdate[quotaKey + "/" + "q"] = oldQuota + updPaid + updSpent
 
-        console.log(LOG_PREFIX, {
-          "toUpdate": toUpdate
-        });
+  /** aggiorna i debs destinazione rimuovendo dal vecchiio queeli non più presenti */
+  function trxDebsRemove(currDebitors, nextDebitors) {
+    const oldKeys = Object.keys(currDebitors)
+    const updKeys = Object.keys(nextDebitors)
 
+    console.log("trxDebsRemove", JSON.stringify(oldKeys), JSON.stringify(updKeys),)
+    const filteredKeys = oldKeys.filter(x => !updKeys.includes(x))
+    if (filteredKeys.length > 0) {
+      for (var ko in oldKeys) {
+        console.log(oldKeys[ko], "-> 0")
+        nextDebitors[oldKeys[ko]] = 0.0
       }
-      console.log("updateWalletQuota " + "updates: " + walletId + " -> " + JSON.stringify(toUpdate))
 
-      return adminDB.ref(COLLECTION_WALLETS + "/" + walletId).update(toUpdate)
+    }
+    console.log("updDebitors:" + JSON.stringify(nextDebitors))
+
+    return nextDebitors
+  }
+
+  function trxUpdateQuota(currTrx, nextTrx) {
+    console.log("trxUpdateQuota", "START")
+
+    const currQuotaAmount = currTrx.q.a;
+    var totalParts = 0.0
+    for (var k1 in nextTrx.debs) {
+      if (nextTrx.debs.hasOwnProperty(k1)) {
+        totalParts += nextTrx.debs[k1]
+      }
+    }
+    // const currQuota = before["q"];
+    // const nextQuota = updated["q"];
+    // aggiorno la quota base
+    const nextQuotaAmount = nextTrx.a / totalParts
+
+    if (nextQuotaAmount === currQuotaAmount) {
+      return currQuotaAmount;
+    }
+
+    console.log("before:", JSON.stringify(currTrx.debs))
+    console.log("updated:", JSON.stringify(nextTrx.debs))
+    console.log("oldQuota:", currTrx.qt, " * ", currTrx.q.a)
+    return nextQuotaAmount;
+  }
+
+
+
+  function updateTrxValues2Delete(currTrx, nextTrx) {
+    console.log("updateWalletQuota", "START")
+
+
+    nextTrx.debs = trxDebsRemove(currTrx.debs, nextTrx.debs);
+    console.log({
+      "currDebitors": nextTrx.debs
     })
-    .catch(err => {
-      console.error(err);
+    console.log({
+      "nextDebitors": currTrx.debs
+    })
+
+
+    // nextTrx.q.a = trxUpdateQuota(nextTrx.debs, currTrx.q, nextTrx.q);
+    nextTrx.q.a = trxUpdateQuota(currTrx, nextTrx);
+    const path = fld_quota + "/" + fld_amount;
+    console.log({
+      "path": path,
+      "amount ": nextTrx.q.a
     });
-  
-  exports.pruneTokens = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
-    // Get all documents where the timestamp exceeds is not within the past month
-    // adminDB.reference('fcmTokens').orderByChild("ts").
-    //   // .where("ts", "<", Date.now() - EXPIRATION_TIME)
-    //   // .get();
-    // // Delete devices with stale tokens
-    // staleTokensResult.forEach(function (doc) { doc.ref.delete(); });
-  });
+    // snap.after.ref.child(path).set(nextTrx.q.a); // TOFIX: posso farlo in altro punto? // TOFIX
+
+    console.log({
+      "quota": {
+        "from": currTrx.getAmountQT(),
+        "to": nextTrx.getAmountQT()
+      }
+    });
+
+
+    var finalEventUpdate = getWalletQuotaUpdate(currTrx, nextTrx);
+
+    console.log({
+      "finalEventUpdate": finalEventUpdate
+    });
+
+    finalEventUpdate = updateWalletCreditor(finalEventUpdate, currTrx.cred, nextTrx.cred);
+    console.log({
+      "finalEventUpdate": finalEventUpdate
+    });
+
+    updateWalletQuota(walletId, finalEventUpdate)
+  }
+
+  function updateWalletCreditor(finalWalletQuota, currCreditor, nextCreditor) {
+    if (nextCreditor === currCreditor) {
+      return;
+    }
+    console.log("update paid nextCreditor: (" + nextCreditor + ") " + JSON.stringify(finalWalletQuota[nextCreditor]))
+    if (finalWalletQuota[nextCreditor] === undefined) {
+      finalWalletQuota[nextCreditor] = {}
+    }
+    finalWalletQuota[nextCreditor]["p"] = updated["a"]
+    console.log("update paid currCreditor: (" + currCreditor + ") " + JSON.stringify(finalWalletQuota[currCreditor]))
+    if (finalWalletQuota[currCreditor] === undefined) {
+      finalWalletQuota[currCreditor] = {}
+    }
+    finalWalletQuota[currCreditor]["p"] = 0.0 - before["a"]
+
+    return finalWalletQuota
+  }
+
+  function getMapVal(map, key, def) {
+
+    if (!map.hasOwnProperty(key) || map[key] == null || map[key] === undefined) return def;
+    return map[key];
+  }
+
+  function updateWalletQuota(walletId, finalEventUpdate) {
+    console.log("updateWalletQuota", "START")
+    const ref = adminDB.ref(COLLECTION_WALLETS).child(walletId)
+
+    ref.child(fld_members).once("value")
+      .then(snap => {
+        if (snap.val() === undefined || snap.val() === null) {
+          console.error("transaction not found")
+          // var p = new Promise();
+          // p.reject(walletId + " - " + " transaction not found"); 
+          return;
+        }
+        console.log("updateWalletQuota", "START 4 REAL");
+        const quotaMap = snap.val();
+        var toUpdate = {}
+        for (var curr in finalEventUpdate) {
+          if (
+            !quotaMap.hasOwnProperty(curr) ||
+            !finalEventUpdate.hasOwnProperty(curr)
+          ) {
+            continue;
+          }
+          const LOG_PREFIX = "updateWalletQuota: (" + curr + ") "
+          var quotaKey = fld_members + "/" + curr
+          const walletMemberCurrent = quotaMap[curr];
+          const walletMemberUpdate = finalEventUpdate[curr];
+          console.log(LOG_PREFIX, {
+            curr: finalEventUpdate[curr]
+          });
+
+
+          const currSpent = getMapVal(walletMemberCurrent, "s", 0.0)
+          const oldPaid = getMapVal(walletMemberCurrent, "p", 0.0)
+          const oldQuota = getMapVal(walletMemberCurrent, "q", 0.0)
+
+          const updSpent = getMapVal(walletMemberUpdate, "s", 0.0)
+          const updPaid = getMapVal(walletMemberUpdate, "p", 0.0)
+          const updQuota = getMapVal(walletMemberUpdate, "q", 0.0)
+
+          console.log(LOG_PREFIX + "quotaMap " + JSON.stringify(walletMemberCurrent))
+          console.log(LOG_PREFIX + "spent " + updSpent)
+          toUpdate[quotaKey + "/s"] = currSpent + updSpent
+
+          console.log(LOG_PREFIX + "paid " + updPaid)
+          toUpdate[quotaKey + "/p"] = oldPaid + updPaid
+
+          console.log(LOG_PREFIX + "quota:  " + oldQuota + " -> " + updPaid + " | " + updSpent)
+          toUpdate[quotaKey + "/" + "q"] = oldQuota + updPaid + updSpent
+
+          console.log(LOG_PREFIX, {
+            "toUpdate": toUpdate
+          });
+
+        }
+        console.log("updateWalletQuota " + "updates: " + walletId + " -> " + JSON.stringify(toUpdate))
+
+        return adminDB.ref(COLLECTION_WALLETS + "/" + walletId).update(toUpdate)
+      })
+      .catch(err => {
+        console.error(err);
+      });
+
+    exports.pruneTokens = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
+      // Get all documents where the timestamp exceeds is not within the past month
+      // adminDB.reference('fcmTokens').orderByChild("ts").
+      //   // .where("ts", "<", Date.now() - EXPIRATION_TIME)
+      //   // .get();
+      // // Delete devices with stale tokens
+      // staleTokensResult.forEach(function (doc) { doc.ref.delete(); });
+    });
 
   }

@@ -2,16 +2,18 @@
 /* eslint-disable max-len */
 'use strict';
 const functions = require("firebase-functions");
+
 const admin = require("firebase-admin");
 const {
   credential,
   database
 } = require("firebase-admin");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { user } = require("firebase-functions/v1/auth");
 const { DataSnapshot } = require("firebase-admin/database");
 // require("firebase-functions/logger/compat");
 
-admin.initializeApp(functions.config().firebase);
+admin.initializeApp();
 
 //=========== CONSTANTS ============//
 
@@ -108,16 +110,16 @@ class WalletMember {
   q = 0.0;
   m = 0.0;
   trxc = 0;
-  user = undefined;
+  // user = undefined;
 
-  constructor(uid, p, s, m, trxc = 0, user) {
+  constructor(uid, p, s, m, trxc = 0){ //, user) {
     this.uid = uid;
     this.p = round3Dec(p);
     this.s = round3Dec(s);
     this.m = round3Dec(m);
     this.q = round3Dec(p - s + m);
     this.trxc = trxc;
-    this.user = user;
+    // this.user = user;
   }
   subtract() {
     this.p *= -1;
@@ -156,7 +158,8 @@ class WalletMember {
     //    return ret;
   }
   toStr() {
-    return [this.uid, this.p, this.s, this.m, this.q, this.user];
+    return [this.uid, this.p, this.s, this.m, this.q];
+      // , this.user];
   }
 }
 
@@ -984,6 +987,7 @@ function walletQuotasCalculate(walletId, trxList, memberKeys) {
 
       var member = new WalletMember(key, paid, debt, move, trxc);
       updatesMember[key] = member.toMap();
+       
       }
 
     }
@@ -1214,13 +1218,97 @@ function walletQuotasCalculate(walletId, trxList, memberKeys) {
         console.error(err);
       });
 
-    exports.pruneTokens = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
-      // Get all documents where the timestamp exceeds is not within the past month
-      // adminDB.reference('fcmTokens').orderByChild("ts").
-      //   // .where("ts", "<", Date.now() - EXPIRATION_TIME)
-      //   // .get();
-      // // Delete devices with stale tokens
-      // staleTokensResult.forEach(function (doc) { doc.ref.delete(); });
-    });
+
 
   }
+// exports.pruneTokens = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
+//   // Get all documents where the timestamp exceeds is not within the past month
+//   // adminDB.reference('fcmTokens').orderByChild("ts").
+//   //   // .where("ts", "<", Date.now() - EXPIRATION_TIME)
+//   //   // .get();
+//   // // Delete devices with stale tokens
+//   // staleTokensResult.forEach(function (doc) { doc.ref.delete(); });
+// });
+exports.memberRemove = functions.database.ref("/wallets/{walletId}/quotas/{memberId}").onDelete(async (snap, context) => {
+  const walletId = context.params.walletId;
+  const memberId = context.params.memberId;
+  
+  const LOG_PREFIX = "removeMember[" + walletId + PATH_SEPARATOR + memberId + "] ";
+  console.log(LOG_PREFIX);
+
+  const trxListSnap = (await adminDB.ref(COLLECTION_TRANSACTIONS).child(walletId).get());
+  if (trxListSnap != null && trxListSnap !== undefined) {
+    const trxList = trxListSnap.val();
+    var trxUpdates = new Map()
+    for (const trxId in trxList) {
+      // console.log("trx" + PATH_SEPARATOR + trxId + ":" + JSON.stringify(trxList[trxId]));
+      const nextTrx = trxFromSnap(trxList[trxId], trxId);
+      console.log("trx" + PATH_SEPARATOR + trxId + ":" + JSON.stringify(nextTrx.debs));
+      const trxQuotaKeys = Object.keys(nextTrx.debs);
+      if (trxQuotaKeys !== undefined && trxQuotaKeys.includes(memberId)) {
+        const deletepath = [trxId, "debs", memberId].join(PATH_SEPARATOR);
+        console.log(LOG_PREFIX + ": > " + deletepath);
+        trxUpdates[deletepath] = null;
+        console.log(LOG_PREFIX + ": " + JSON.stringify(trxUpdates));
+        
+      }
+
+    }
+    const toDeleteKeys = Object.keys(trxUpdates);
+    console.log(LOG_PREFIX + ":" + JSON.stringify(toDeleteKeys.length))
+    if (toDeleteKeys.length > 0) {
+      
+      const deletepath = [COLLECTION_TRANSACTIONS, walletId].join(PATH_SEPARATOR);
+      console.log(LOG_PREFIX + ":" + deletepath + "-" + JSON.stringify(trxUpdates));
+      await adminDB.ref(deletepath).update(trxUpdates)
+      await adminDB.ref(COLLECTION_WALLETS).child(walletId).child("updQuota").set(currentTM())
+    }
+
+  }
+
+  
+});
+exports.memberAddToAll = onCall(async (req) => {
+  const walletId = req.data["w"];
+  const memberId = req.data["m"];
+  const parts = req.data["n"];
+  
+  const LOG_PREFIX = "memberAddToAll[" + walletId + PATH_SEPARATOR + memberId + PATH_SEPARATOR + parts + "] ";
+  console.log(LOG_PREFIX);
+  
+  const trxListSnap = (await adminDB.ref(COLLECTION_TRANSACTIONS).child(walletId).get());
+  if (trxListSnap != null && trxListSnap !== undefined) {
+    const trxList = trxListSnap.val();
+    var trxUpdates = new Map()
+    for (const trxId in trxList) {
+      // console.log("trx" + PATH_SEPARATOR + trxId + ":" + JSON.stringify(trxList[trxId]));
+      const nextTrx = trxFromSnap(trxList[trxId], trxId);
+      console.log("trx" + PATH_SEPARATOR + trxId + ":" + JSON.stringify(nextTrx.debs));
+      const trxQuotaKeys = Object.keys(nextTrx.debs);
+
+      if (trxQuotaKeys !== undefined && trxQuotaKeys.includes(memberId) && nextTrx.debs[memberId] == parts) {
+        continue;
+      }
+
+      const updatePath = [trxId, "debs", memberId].join(PATH_SEPARATOR);
+      console.log(LOG_PREFIX + ": > " + updatePath);
+      trxUpdates[updatePath] = parts;
+      console.log(LOG_PREFIX + ": " + JSON.stringify(trxUpdates));
+      
+        
+    }
+    const updatesKeys = Object.keys(trxUpdates);
+    console.log(LOG_PREFIX + ":" + JSON.stringify(updatesKeys.length))
+    if (updatesKeys.length > 0) {
+          
+        const updatePath = [COLLECTION_TRANSACTIONS, walletId].join(PATH_SEPARATOR);
+        console.log(LOG_PREFIX + ":" + updatePath + "-" + JSON.stringify(trxUpdates));
+        await adminDB.ref(updatePath).update(trxUpdates);
+        await adminDB.ref(COLLECTION_WALLETS).child(walletId).child("updQuota").set(currentTM())
+    }
+    
+  }
+        
+  return { "status": "ok" };
+});
+      

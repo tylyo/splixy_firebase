@@ -1274,7 +1274,10 @@ exports.memberAddToAll = onCall(async (req) => {
   const parts = req.data["n"];
   
   const LOG_PREFIX = "memberAddToAll[" + walletId + PATH_SEPARATOR + memberId + PATH_SEPARATOR + parts + "] ";
-  console.log(LOG_PREFIX);
+  
+  console.log(LOG_PREFIX + "auth "
+    + JSON.stringify(req.auth)
+  );
   
   const trxListSnap = (await adminDB.ref(COLLECTION_TRANSACTIONS).child(walletId).get());
   if (trxListSnap != null && trxListSnap !== undefined) {
@@ -1283,7 +1286,7 @@ exports.memberAddToAll = onCall(async (req) => {
     for (const trxId in trxList) {
       // console.log("trx" + PATH_SEPARATOR + trxId + ":" + JSON.stringify(trxList[trxId]));
       const nextTrx = trxFromSnap(trxList[trxId], trxId);
-      console.log("trx" + PATH_SEPARATOR + trxId + ":" + JSON.stringify(nextTrx.debs));
+      console.log("trx" + PATH_SEPARATOR + trxId + ":" + JSON.stringify(nextTrx.debs[memberId]));
       const trxQuotaKeys = Object.keys(nextTrx.debs);
 
       if (trxQuotaKeys !== undefined && trxQuotaKeys.includes(memberId) && nextTrx.debs[memberId] == parts) {
@@ -1291,14 +1294,15 @@ exports.memberAddToAll = onCall(async (req) => {
       }
 
       const updatePath = [trxId, "debs", memberId].join(PATH_SEPARATOR);
-      console.log(LOG_PREFIX + ": > " + updatePath);
+      // console.log(LOG_PREFIX + ": > " + updatePath);
       trxUpdates[updatePath] = parts;
-      console.log(LOG_PREFIX + ": " + JSON.stringify(trxUpdates));
+      // console.log(LOG_PREFIX + ": " + JSON.stringify(trxUpdates));
       
         
     }
     const updatesKeys = Object.keys(trxUpdates);
-    console.log(LOG_PREFIX + ":" + JSON.stringify(updatesKeys.length))
+    
+    console.log(LOG_PREFIX + " - tot:" + JSON.stringify(updatesKeys.length))
     if (updatesKeys.length > 0) {
           
         const updatePath = [COLLECTION_TRANSACTIONS, walletId].join(PATH_SEPARATOR);

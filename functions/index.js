@@ -1,7 +1,7 @@
 /* eslint-disable arrow-body-style */
 /* eslint-disable max-len */
 'use strict';
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 
 const admin = require("firebase-admin");
 const {
@@ -179,7 +179,7 @@ exports.updateAuthUser = functions.database.ref("/users/{userId}/lastLogin").onW
   // functions.logger.info("context", provider);
   if (provider !== undefined || provider == "password") {
     functions.logger.info({
-      "email": u_id,
+      "uid": u_id,
       "ev:": email_verified,
       "ref": JSON.stringify(change.after.parent)
     });
@@ -445,7 +445,7 @@ exports.usersSavewalletshareLink = functions.database.ref("/users/{uid}/" + COLL
 
     updates[COLLECTION_WALLETS + PATH_SEPARATOR + walletId + "/acl/r/" + uid] = true;
 
-    const walletJoinReqPath = [COLLECTION_USERS, uid, "joinreq", sharedLinkID, "id"].join(PATH_SEPARATOR);
+    const walletJoinReqPath = [COLLECTION_USERS, uid, COLLECTION_JOINREQUEST, sharedLinkID, "id"].join(PATH_SEPARATOR);
     updates[walletJoinReqPath] = walletId;
     console.log("updates: " + JSON.stringify(updates));
     await adminDB.ref().update(updates);

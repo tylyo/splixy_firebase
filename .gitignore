@@ -65,3 +65,16 @@ node_modules/
 # dotenv environment variables file
 .env
 .DS_Store
+# Emulatori ed export di dati reali (DB, utenti): mai nel repository
+.emulator-tmp/
+export/
+firebase-export-*/
+*-debug.log
+.env.*
+!.env.example
+functions/.env
+functions/*.local
+functions/*.p8
+functions/SecretSharedKey.txt
+.runtimeconfig.json
+*-adminsdk*.json

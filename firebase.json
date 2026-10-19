@@ -58,6 +58,30 @@
     "public": "public",
     "rewrites": [
       {
+        "source": "/privacy.it",
+        "destination": "/privacy.it.html"
+      },
+      {
+        "source": "/privacy.en",
+        "destination": "/privacy.en.html"
+      },
+      {
+        "source": "/terms.it",
+        "destination": "/terms.it.html"
+      },
+      {
+        "source": "/terms.en",
+        "destination": "/terms.en.html"
+      },
+      {
+        "source": "/support.it",
+        "destination": "/support.it.html"
+      },
+      {
+        "source": "/support.en",
+        "destination": "/support.en.html"
+      },
+      {
         "destination": "/privacy.html",
         "source": "/privacy"
       },
@@ -70,7 +94,18 @@
         "source": "/support"
       }
     ],
-    "site": "splixy"
+    "site": "splixy",
+    "headers": [
+      {
+        "source": "/@(privacy|terms|support).@(it|en)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=300"
+          }
+        ]
+      }
+    ]
   },
   "remoteconfig": {
     "template": "remoteconfig.template.json"

@@ -1,4 +1,15 @@
 {
+  "appStoreNotifications": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "httpsTrigger": {}
+  },
   "askToJoinWallet": {
     "platform": "gcfv1",
     "availableMemoryMb": null,
@@ -47,6 +58,28 @@
     "vpc": null,
     "callableTrigger": {}
   },
+  "expireSubscriptions": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "scheduleTrigger": {
+      "schedule": "every 24 hours",
+      "retryConfig": {
+        "retryCount": null,
+        "maxDoublings": null,
+        "maxRetryDuration": null,
+        "maxBackoffDuration": null,
+        "minBackoffDuration": null
+      },
+      "timeZone": null
+    },
+    "labels": {}
+  },
   "memberAddToAll": {
     "availableMemoryMb": null,
     "timeoutSeconds": null,
@@ -73,6 +106,42 @@
       "eventType": "providers/google.firebase.database/eventTypes/ref.delete",
       "eventFilters": {
         "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}/quotas/{memberId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "onPurchaseWrite": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/subscriptions/{uid}/{platform}/{purchaseId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "playRtdn": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "google.pubsub.topic.publish",
+      "eventFilters": {
+        "resource": "projects/demo-splixy/topics/play-subscriptions"
       },
       "retry": false
     },

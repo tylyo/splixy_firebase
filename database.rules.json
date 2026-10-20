@@ -59,8 +59,33 @@
     "users": {
       "$uid": {
         ".read": "auth !== null && auth.uid === $uid",
-        ".write": "auth !== null && auth.uid === $uid"
+        ".write": "auth !== null && auth.uid === $uid && (newData.child('su').val() === true) === (data.child('su').val() === true) && (newData.child('sub/ios').val() === data.child('sub/ios').val() || newData.child('sub/ios').val() === null) && (newData.child('sub/android').val() === data.child('sub/android').val() || newData.child('sub/android').val() === null) && newData.child('subData/platform').val() === data.child('subData/platform').val() && newData.child('subData/expireAt').val() === data.child('subData/expireAt').val() && newData.child('subData/verifiedAt').val() === data.child('subData/verifiedAt').val() && newData.child('subData/txId').val() === data.child('subData/txId').val() && (newData.child('subData/role').val() === data.child('subData/role').val() || newData.child('subData/role').val() === 'free') && (newData.child('subData/status').val() === data.child('subData/status').val() || newData.child('subData/status').val() === 'expired')"
       }
+    },
+    "subscriptions": {
+      "$uid": {
+        ".read": "auth !== null && auth.uid === $uid",
+        "$platform": {
+          ".validate": "$platform === 'ios' || $platform === 'android'",
+          "$purchaseId": {
+            ".write": "auth !== null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['productId', 'serverVerificationData']) && newData.child('productId').isString() && newData.child('serverVerificationData').isString() && newData.child('serverVerificationData').val().length <= 20000"
+          }
+        }
+      }
+    },
+    "subscriptionVerifications": {
+      ".read": false,
+      ".write": false
+    },
+    "purchaseIndex": {
+      ".read": false,
+      ".write": false
+    },
+    "activeSubscriptions": {
+      ".read": false,
+      ".write": false,
+      ".indexOn": [".value"]
     },
     "wallets": {
       "$wid": {

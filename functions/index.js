@@ -9,6 +9,7 @@ admin.initializeApp();
 Object.assign(exports,
     require("./auth"),
     require("./accountDeletion"),
+    require("./subscriptions"),
     require("./users"),
     require("./wallets"),
     require("./join"),

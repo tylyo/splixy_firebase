@@ -35,6 +35,18 @@
     },
     "labels": {}
   },
+  "deleteUser": {
+    "platform": "gcfv1",
+    "labels": {},
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "callableTrigger": {}
+  },
   "memberAddToAll": {
     "availableMemoryMb": null,
     "timeoutSeconds": null,
@@ -65,6 +77,39 @@
       "retry": false
     },
     "labels": {}
+  },
+  "purgeDeletedUsers": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "scheduleTrigger": {
+      "schedule": "every 24 hours",
+      "retryConfig": {
+        "retryCount": null,
+        "maxDoublings": null,
+        "maxRetryDuration": null,
+        "maxBackoffDuration": null,
+        "minBackoffDuration": null
+      },
+      "timeZone": null
+    },
+    "labels": {}
+  },
+  "requestAccountDeletion": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "httpsTrigger": {}
   },
   "trxCreate": {
     "platform": "gcfv1",

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elimina il tuo account Splixy</title>
+<meta name="description" content="Come eliminare il tuo account Splixy e i dati personali collegati.">
+<link rel="canonical" href="https://splixy.web.app/it/delete-account">
+<link rel="alternate" hreflang="it" href="https://splixy.web.app/it/delete-account">
+<link rel="alternate" hreflang="en" href="https://splixy.web.app/delete-account">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/site/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/site/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Splixy">
+<meta property="og:title" content="Elimina il tuo account Splixy">
+<meta property="og:description" content="Come eliminare il tuo account Splixy e i dati personali collegati.">
+<meta property="og:url" content="https://splixy.web.app/it/delete-account">
+<meta property="og:image" content="https://splixy.web.app/assets/site/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0062a8">
+<link rel="stylesheet" href="/assets/site/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Vai al contenuto</a>
+<header class="site-header"><div class="wrap">
+<a class="brand" href="/it"><img src="/assets/img/logo.webp" alt="" width="34" height="34">Splixy</a>
+<nav class="nav" aria-label="Main">
+<a class="opt" href="/it#features">Funzioni</a>
+<a class="opt" href="/it#plans">Piani</a>
+<a href="/it/support">Supporto</a>
+<a href="/it/privacy">Privacy</a>
+<a href="/it/terms">Termini</a>
+<a class="lang" href="/delete-account" hreflang="en" lang="en">English</a>
+</nav></div></header>
+
+<main id="main" class="doc"><div class="wrap">
+<h1>Elimina il tuo account</h1>
+<p class="updated">Ultimo aggiornamento: 20 ottobre 2026</p>
+
+<p>Puoi eliminare in qualsiasi momento il tuo account Splixy e i dati personali collegati.</p>
+
+<h2>Eliminalo dall'app</h2>
+<ol>
+<li>Se hai un abbonamento Pro, annullalo prima dalle impostazioni del tuo account App Store o Google Play. Eliminare l'account Splixy non annulla l'abbonamento (vedi <a href="/it/support">Supporto</a>).</li>
+<li>Nell'app apri <strong>Impostazioni e Info</strong>, tocca <strong>Elimina il tuo account</strong> e conferma.</li>
+</ol>
+<p>Il tuo account viene disattivato subito e vieni disconnesso.</p>
+
+<h2>Richiedi l'eliminazione senza l'app</h2>
+<p>Se non riesci più ad aprire l'app, inviaci qui la richiesta. La verificheremo e completeremo l'eliminazione entro 30 giorni.</p>
+<form id="delete-form" class="form" novalidate>
+<label for="email">Indirizzo email del tuo account</label>
+<input type="email" id="email" name="email" required autocomplete="email" placeholder="nome@esempio.it">
+<label for="reason">Perché te ne vai? (facoltativo)</label>
+<select id="reason" name="reason">
+<option value="not_using">Non uso più l'app</option>
+<option value="privacy_concerns">Preoccupazioni sulla privacy</option>
+<option value="duplicate_account">Account creato per errore o duplicato</option>
+<option value="trip_completed">Il viaggio o l'evento è finito</option>
+<option value="too_many_notifications">Troppe notifiche</option>
+<option value="not_satisfied">Non soddisfatto delle funzioni</option>
+<option value="other" selected>Altro</option>
+</select>
+<label for="reasonDetail">Vuoi aggiungere qualcosa? (facoltativo)</label>
+<textarea id="reasonDetail" name="reasonDetail" maxlength="500" rows="3"></textarea>
+<label class="check"><input type="checkbox" id="confirm" required> Capisco che il mio account e i miei dati verranno eliminati definitivamente dopo 30 giorni.</label>
+<button type="submit" class="btn" id="submit-btn">Invia richiesta</button>
+<p class="status" id="status" role="status" aria-live="polite"></p>
+</form>
+<script>
+(function () {
+  var form = document.getElementById("delete-form"), status = document.getElementById("status"), btn = document.getElementById("submit-btn");
+  var msg = {ok: "Richiesta inviata. Ti confermeremo via email e completeremo l'eliminazione entro 30 giorni.", bad: "Inserisci un indirizzo email valido e conferma la casella.", err: "Qualcosa è andato storto. Riprova o scrivi a tylyodev@gmail.com."};
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = document.getElementById("email").value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !document.getElementById("confirm").checked) { status.textContent = msg.bad; return; }
+    btn.disabled = true; status.textContent = "...";
+    fetch("/api/requestAccountDeletion", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email: email, reason: document.getElementById("reason").value, reasonDetail: document.getElementById("reasonDetail").value})})
+      .then(function (r) { if (!r.ok) throw new Error(r.status); status.textContent = msg.ok; form.reset(); })
+      .catch(function () { status.textContent = msg.err; })
+      .then(function () { btn.disabled = false; });
+  });
+})();
+</script>
+
+<h2>Cosa succede dopo</h2>
+<ul>
+<li><strong>Subito:</strong> il tuo account viene disattivato, le sessioni chiuse e i token per le notifiche eliminati.</li>
+<li><strong>Per 30 giorni:</strong> il tuo profilo resta archiviato e inutilizzato, così che l'eliminazione possa essere annullata se è stata un errore. Scrivi a <a href="mailto:tylyodev@gmail.com">tylyodev@gmail.com</a> entro questo periodo.</li>
+<li><strong>Dopo 30 giorni:</strong> il tuo account e le credenziali di accesso, il profilo (email, nickname, avatar), i dati degli acquisti e la foto profilo vengono eliminati definitivamente. I gruppi di cui eri l'unico utente vengono eliminati con le relative spese.</li>
+</ul>
+
+<h2>Cosa può restare</h2>
+<p>Se hai partecipato a gruppi condivisi con altre persone, queste hanno ancora bisogno delle spese per mantenere corretti i propri saldi. In questi gruppi il tuo partecipante resta come nome senza collegamento ad alcun account e, se eri l'unico creatore, il ruolo passa a un altro membro. I dati che dobbiamo conservare per un obbligo di legge e i backup vengono eliminati al termine del loro periodo di conservazione.</p>
+
+<h2>Domande</h2>
+<p>Consulta l'<a href="/it/privacy">Informativa sulla privacy</a> o scrivi a <a href="mailto:tylyodev@gmail.com">tylyodev@gmail.com</a>.</p>
+
+</div></main>
+<footer class="site-footer"><div class="wrap">
+<div>&copy; 2026 Splixy. Creato da tylyoDev.</div>
+<div><a href="/it/support">Supporto</a><a href="/it/privacy">Privacy</a><a href="/it/terms">Termini</a><a href="/it/delete-account">Elimina account</a><a href="mailto:tylyodev@gmail.com">Contatti</a></div>
+</div></footer>
+</body>
+</html>

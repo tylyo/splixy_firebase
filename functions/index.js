@@ -8,6 +8,7 @@ admin.initializeApp();
 // Firebase le rinominerebbe in `gruppo-nomeFunzione`, cancellando e ricreando quelle esistenti.
 Object.assign(exports,
     require("./auth"),
+    require("./accountDeletion"),
     require("./users"),
     require("./wallets"),
     require("./join"),

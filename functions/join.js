@@ -118,6 +118,8 @@ function joinWalletUpdateWithMember(snap, walletId, memberId) {
  */
 exports.usersGroupUpdate = functions.database.ref("/users/{uid}/g/{walletId}")
     .onWrite(async (change, context) => {
+      // le scritture admin (es. eliminazione account, vedi accountDeletion.js) non sono ingressi/uscite dell'utente
+      if (context.authType === "ADMIN") return null;
       const walletId = context.params.walletId;
       const authId = context.auth.uid;
       const memberValues = change.after.val();

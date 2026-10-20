@@ -9,8 +9,10 @@ Backend dell'app Splixy (repo app: `../application`).
 - `functions/` — Cloud Functions (Node 20), divise in moduli (`index.js` inizializza l'SDK e li ri-esporta):
   - `auth.js` (authUser), `users.js` (updateAuthUser), `wallets.js`, `join.js` (condivisione e ingresso/uscita), `transactions.js` (trxCreate/Update/Delete), `members.js` (memberRemove, memberAddToAll)
   - `calculations.js` (calcolo delle quote, solo logica pura), `walletQuotas.js` (scrittura delle quote), `notifications.js` (push FCM), `models.js`, `commons.js` (costanti e helper)
+  - `accountDeletion.js` (eliminazione account in due fasi come matrimoni: `deleteUser` callable → archivia in `/usersDeleted`, disabilita l'utente; `purgeDeletedUsers` ogni 24 ore dopo 30 giorni toglie l'utente dai wallet e lo elimina da Auth; `requestAccountDeletion` HTTP per la pagina web, raggiunta da `/api/requestAccountDeletion`) e `accountCleanup.js` (logica pura sui wallet, non esportata). Un partecipante (`quotas/{id}`) non va mai eliminato: `memberRemove` ricalcolerebbe i saldi degli altri. La cancellazione definitiva non parte negli emulatori senza pubsub: si prova con `purgeDeletedUsers.run({}, {})` da uno script Node
   - le functions sono esportate **piatte** (`Object.assign(exports, require(...))`) e non a gruppi come in matrimoni: con `exports.gruppo = require(...)` Firebase le rinominerebbe in `gruppo-nome`, cancellando e ricreando quelle già in produzione e richiamate dall'app
-- `public/` — hosting: pagine privacy, termini, supporto
+- `public/` — hosting: sito (landing IT/EN, supporto, privacy, termini, eliminazione account). Le pagine sono **generate** da `site/` (`python3 site/build.py`; immagini con `site/make_images.py`, richiede Pillow): non modificarle a mano
+  - `/privacy.{it,en}`, `/terms.{it,en}`, `/support.{it,en}` sono **frammenti HTML senza `<html`** perché `attilio_lib` li scarica e li mostra nell'app scartando le risposte con `<html`; le pagine web complete stanno a `/privacy`, `/it/privacy` ecc.
 
 ## Comandi
 

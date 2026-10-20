@@ -53,6 +53,9 @@
         ".write": "auth.uid !== null && root.child('wallets').child($wid).child('acl/w').child(auth.uid).val() === true"
       }
     },
+    "usersDeleted": {
+      ".indexOn": ["purgeAt"]
+    },
     "users": {
       "$uid": {
         ".read": "auth !== null && auth.uid === $uid",

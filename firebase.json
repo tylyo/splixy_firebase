@@ -82,6 +82,34 @@
         "destination": "/support.en.html"
       },
       {
+        "source": "/it",
+        "destination": "/index.it.html"
+      },
+      {
+        "source": "/it/privacy",
+        "destination": "/it/privacy.html"
+      },
+      {
+        "source": "/it/terms",
+        "destination": "/it/terms.html"
+      },
+      {
+        "source": "/it/support",
+        "destination": "/it/support.html"
+      },
+      {
+        "source": "/it/delete-account",
+        "destination": "/it/delete-account.html"
+      },
+      {
+        "source": "/delete-account",
+        "destination": "/delete-account.html"
+      },
+      {
+        "function": "requestAccountDeletion",
+        "source": "/api/requestAccountDeletion"
+      },
+      {
         "destination": "/privacy.html",
         "source": "/privacy"
       },

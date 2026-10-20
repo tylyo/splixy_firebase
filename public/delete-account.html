@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete your Splixy account</title>
+<meta name="description" content="How to delete your Splixy account and the personal data linked to it.">
+<link rel="canonical" href="https://splixy.web.app/delete-account">
+<link rel="alternate" hreflang="en" href="https://splixy.web.app/delete-account">
+<link rel="alternate" hreflang="it" href="https://splixy.web.app/it/delete-account">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/site/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/site/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Splixy">
+<meta property="og:title" content="Delete your Splixy account">
+<meta property="og:description" content="How to delete your Splixy account and the personal data linked to it.">
+<meta property="og:url" content="https://splixy.web.app/delete-account">
+<meta property="og:image" content="https://splixy.web.app/assets/site/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0062a8">
+<link rel="stylesheet" href="/assets/site/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header"><div class="wrap">
+<a class="brand" href="/"><img src="/assets/img/logo.webp" alt="" width="34" height="34">Splixy</a>
+<nav class="nav" aria-label="Main">
+<a class="opt" href="/#features">Features</a>
+<a class="opt" href="/#plans">Plans</a>
+<a href="/support">Support</a>
+<a href="/privacy">Privacy</a>
+<a href="/terms">Terms</a>
+<a class="lang" href="/it/delete-account" hreflang="it" lang="it">Italiano</a>
+</nav></div></header>
+
+<main id="main" class="doc"><div class="wrap">
+<h1>Delete your account</h1>
+<p class="updated">Last updated: October 20, 2026</p>
+
+<p>You can delete your Splixy account and the personal data linked to it at any time.</p>
+
+<h2>Delete it from the app</h2>
+<ol>
+<li>If you have a Pro subscription, cancel it first in your App Store or Google Play account settings. Deleting your Splixy account does not cancel a subscription (see <a href="/support">Support</a>).</li>
+<li>In the app open <strong>Settings &amp; Info</strong>, tap <strong>Delete your account</strong> and confirm.</li>
+</ol>
+<p>Your account is disabled right away and you are signed out.</p>
+
+<h2>Request deletion without the app</h2>
+<p>If you can no longer open the app, send us a request here. We will check it and complete the deletion within 30 days.</p>
+<form id="delete-form" class="form" novalidate>
+<label for="email">Email address of your account</label>
+<input type="email" id="email" name="email" required autocomplete="email" placeholder="name@example.com">
+<label for="reason">Why are you leaving? (optional)</label>
+<select id="reason" name="reason">
+<option value="not_using">I no longer use the app</option>
+<option value="privacy_concerns">Privacy concerns</option>
+<option value="duplicate_account">Account created by mistake or duplicate</option>
+<option value="trip_completed">The trip or event is over</option>
+<option value="too_many_notifications">Too many notifications</option>
+<option value="not_satisfied">Not satisfied with the features</option>
+<option value="other" selected>Other</option>
+</select>
+<label for="reasonDetail">Anything to add? (optional)</label>
+<textarea id="reasonDetail" name="reasonDetail" maxlength="500" rows="3"></textarea>
+<label class="check"><input type="checkbox" id="confirm" required> I understand that my account and its data will be permanently deleted after 30 days.</label>
+<button type="submit" class="btn" id="submit-btn">Send request</button>
+<p class="status" id="status" role="status" aria-live="polite"></p>
+</form>
+<script>
+(function () {
+  var form = document.getElementById("delete-form"), status = document.getElementById("status"), btn = document.getElementById("submit-btn");
+  var msg = {ok: "Request sent. We will confirm by email and complete the deletion within 30 days.", bad: "Please enter a valid email address and confirm the checkbox.", err: "Something went wrong. Please try again or write to tylyodev@gmail.com."};
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = document.getElementById("email").value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !document.getElementById("confirm").checked) { status.textContent = msg.bad; return; }
+    btn.disabled = true; status.textContent = "...";
+    fetch("/api/requestAccountDeletion", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email: email, reason: document.getElementById("reason").value, reasonDetail: document.getElementById("reasonDetail").value})})
+      .then(function (r) { if (!r.ok) throw new Error(r.status); status.textContent = msg.ok; form.reset(); })
+      .catch(function () { status.textContent = msg.err; })
+      .then(function () { btn.disabled = false; });
+  });
+})();
+</script>
+
+<h2>What happens next</h2>
+<ul>
+<li><strong>Immediately:</strong> your account is disabled, your sessions are closed and your notification tokens are deleted.</li>
+<li><strong>For 30 days:</strong> your profile is kept archived and not used, so that the deletion can be undone if it was a mistake. Write to <a href="mailto:tylyodev@gmail.com">tylyodev@gmail.com</a> within this period.</li>
+<li><strong>After 30 days:</strong> your account and sign-in credentials, your profile (email, nickname, avatar), purchase records and profile photo are permanently deleted. Groups of which you were the only user are deleted with their expenses.</li>
+</ul>
+
+<h2>What may remain</h2>
+<p>If you took part in groups shared with other people, those people still need the expenses to keep their balances correct. In those groups your participant stays as a name without a link to any account, and if you were the only creator the role passes to another member. Data we must keep to comply with a legal obligation, and backups, are deleted at the end of their retention period.</p>
+
+<h2>Questions</h2>
+<p>See the <a href="/privacy">Privacy Policy</a> or write to <a href="mailto:tylyodev@gmail.com">tylyodev@gmail.com</a>.</p>
+
+</div></main>
+<footer class="site-footer"><div class="wrap">
+<div>&copy; 2026 Splixy. Made by tylyoDev.</div>
+<div><a href="/support">Support</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/delete-account">Delete account</a><a href="mailto:tylyodev@gmail.com">Contact</a></div>
+</div></footer>
+</body>
+</html>

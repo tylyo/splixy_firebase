@@ -65,6 +65,11 @@ function updateWalletQuotaLast(walletId, nextMembers, delta = 0, lastEvent = {})
   adminDB.ref(COLLECTION_WALLETS).child(walletId).once("value", (snap) => {
     console.group("updateWalletQuotaLast", walletId);
     const walletMap = snap.val();
+    if (walletMap === null) {
+      console.log("updateWalletQuotaLast -- wallet non trovato (eliminato?)", walletId);
+      console.groupEnd();
+      return;
+    }
     const currMembers = walletMap["quotas"];
 
     let trxCount = 0;

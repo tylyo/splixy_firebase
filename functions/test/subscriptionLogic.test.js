@@ -138,3 +138,25 @@ describe("classifyAppleNotification", () => {
     assert.equal(L.classifyAppleNotification("XYZ"), "altro");
   });
 });
+
+describe("purchaseIndexKeysOf", () => {
+  const logic = require("../subscriptionLogic");
+  const assert = require("assert");
+
+  it("raccoglie le chiavi dagli esiti di verifica e dall'ultimo subData, senza doppioni", () => {
+    const keys = logic.purchaseIndexKeysOf(
+        {ios: {a: {txId: "100"}, b: {txId: "100"}}, android: {c: {txId: "tok"}, d: {status: "rejected"}}},
+        {platform: "android", txId: "tok2"},
+    );
+    assert.deepStrictEqual(keys.sort(), [
+      logic.indexKey("android", "tok"),
+      logic.indexKey("android", "tok2"),
+      logic.indexKey("ios", "100"),
+    ].sort());
+  });
+
+  it("senza dati non restituisce nulla", () => {
+    assert.deepStrictEqual(logic.purchaseIndexKeysOf(null, null), []);
+    assert.deepStrictEqual(logic.purchaseIndexKeysOf({}, {platform: "web", txId: "x"}), []);
+  });
+});

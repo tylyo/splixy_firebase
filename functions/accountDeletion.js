@@ -22,12 +22,13 @@ const {
   currentTM,
 } = require("./commons");
 const {planWalletExit} = require("./accountCleanup");
+const {purchaseIndexKeysOf} = require("./subscriptionLogic");
 
 const COLLECTION_DELETION_REQUESTS = "deletionRequests";
 const COLLECTION_USERS_DELETED = "usersDeleted";
 // nodi indicizzati per uid: i token delle notifiche si eliminano subito, il resto alla cancellazione definitiva
 const NODES_REMOVED_NOW = ["fcmTokens", "apnToken"];
-const NODES_REMOVED_AT_PURGE = ["purchases", COLLECTION_JOINREQUEST];
+const NODES_REMOVED_AT_PURGE = ["purchases", COLLECTION_JOINREQUEST, "subscriptions", "subscriptionVerifications"];
 const DELETION_GRACE_DAYS = 30;
 const SECONDS_PER_DAY = 86400;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -91,6 +92,22 @@ async function deleteUserFiles(uid) {
 }
 
 /**
+ * Stacca l'utente dall'abbonamento: toglie gli indici usati dalle notifiche degli store e la scadenza da
+ * controllare, così un rinnovo o un rimborso non ricrea users/{uid}/subData. L'abbonamento sullo store
+ * non viene disdetto: lo gestisce l'utente dal proprio account Apple o Google.
+ * @param {string} uid utente
+ * @param {object} userData profilo dell'utente (può contenere subData)
+ */
+async function detachSubscription(uid, userData) {
+  const verifications = (await adminDB.ref(`subscriptionVerifications/${uid}`).get()).val();
+  const updates = {[`activeSubscriptions/${uid}`]: null};
+  for (const key of purchaseIndexKeysOf(verifications, userData && userData.subData)) {
+    updates[`purchaseIndex/${key}`] = null;
+  }
+  await adminDB.ref().update(updates);
+}
+
+/**
  * Callable: elimina l'account dell'utente autenticato (fase 1). L'uid arriva da context.auth,
  * mai dai parametri: un utente può eliminare solo il proprio account.
  */
@@ -146,6 +163,7 @@ exports.deleteUser = functions.https.onCall(async (data, context) => {
     tokens[`${node}/${uid}`] = null;
   });
   await adminDB.ref().update(tokens);
+  await detachSubscription(uid, userData);
 
   functions.logger.log("deleteUser -- done (disabled, purge at %s) -- uid:%s", archived.purgeAt, uid);
   return {success: true};

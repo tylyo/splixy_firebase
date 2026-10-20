@@ -96,6 +96,7 @@ function createSubscriptionService({db, apple, google, now, log = console}) {
       status: "verified",
       isActive: state.isActive,
       productId: purchase.productId,
+      txId: state.txId,
       at: Math.floor(now() / 1000),
     });
     return {outcome, isActive: state.isActive};

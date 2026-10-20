@@ -40,6 +40,28 @@ function indexKey(platform, id) {
 }
 
 /**
+ * Chiavi di purchaseIndex che appartengono a un utente, ricavate dagli esiti di verifica
+ * (subscriptionVerifications/{uid}) e dall'ultimo subData. Servono a staccare l'utente dalle notifiche degli store
+ * quando elimina l'account, così un rinnovo non ricrea users/{uid}/subData.
+ * @param {object|null} verifications esiti: {platform: {purchaseId: {txId, ...}}}
+ * @param {object|null} subData ultimo stato scritto (platform, txId)
+ * @return {string[]} chiavi senza doppioni
+ */
+function purchaseIndexKeysOf(verifications, subData) {
+  const keys = new Set();
+  for (const platform of PLATFORMS) {
+    const byPurchase = (verifications && verifications[platform]) || {};
+    for (const rec of Object.values(byPurchase)) {
+      if (rec && rec.txId) keys.add(indexKey(platform, rec.txId));
+    }
+  }
+  if (subData && subData.txId && PLATFORMS.includes(subData.platform)) {
+    keys.add(indexKey(subData.platform, subData.txId));
+  }
+  return [...keys];
+}
+
+/**
  * Stato normalizzato a partire da una transazione Apple già verificata e decodificata (StoreKit 2).
  * @param {object} tx transazione decodificata (productId, expiresDate, revocationDate, originalTransactionId)
  * @param {number} nowMs ora corrente in millisecondi
@@ -183,6 +205,7 @@ module.exports = {
   PLATFORMS,
   roleForProduct,
   indexKey,
+  purchaseIndexKeysOf,
   appleState,
   googleState,
   shouldWriteSubData,

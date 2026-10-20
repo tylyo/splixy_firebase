@@ -15,6 +15,7 @@
   "name": "functions",
   "private": true,
   "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "serve": "firebase emulators:start --only functions",

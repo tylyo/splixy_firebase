@@ -1,0 +1,303 @@
+{
+  "askToJoinWallet": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/users/{uid}/wallets/{walletId}/requests"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "authUser": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/firebase.auth/eventTypes/user.create",
+      "eventFilters": {
+        "resource": "projects/demo-splixy"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "memberAddToAll": {
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "concurrency": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "platform": "gcfv2",
+    "labels": {},
+    "callableTrigger": {}
+  },
+  "memberRemove": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.delete",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}/quotas/{memberId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "trxCreate": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.create",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/transactions/{walletId}/{trxId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "trxDelete": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.delete",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/transactions/{walletId}/{trxId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "trxUpdate": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.update",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/transactions/{walletId}/{trxId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "updateAuthUser": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/users/{userId}/lastLogin"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "userJoinedWallet": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}/acl/r/{uid}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "usersGroupUpdate": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/users/{uid}/g/{walletId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "usersSavewalletshareLink": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/users/{uid}/joinreq/{sl}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "walletCreate": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.create",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "walletDelete": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.delete",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "walletNameUpdate": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.update",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}/name"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "walletUpdateNotification": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.create",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/lastEvents/{walletId}/{eventId}"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "walletUpdateQuotas": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}/updQuota"
+      },
+      "retry": false
+    },
+    "labels": {}
+  },
+  "walletshareCreate": {
+    "platform": "gcfv1",
+    "availableMemoryMb": null,
+    "timeoutSeconds": null,
+    "minInstances": null,
+    "maxInstances": null,
+    "ingressSettings": null,
+    "serviceAccountEmail": null,
+    "vpc": null,
+    "eventTrigger": {
+      "eventType": "providers/google.firebase.database/eventTypes/ref.write",
+      "eventFilters": {
+        "resource": "projects/_/instances/demo-splixy-default-rtdb/refs/wallets/{walletId}/sl"
+      },
+      "retry": false
+    },
+    "labels": {}
+  }
+}
